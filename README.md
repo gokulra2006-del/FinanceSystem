@@ -1,4 +1,3 @@
-```markdown
 <div align="center">
   <img src="frontend/public/logo.png" alt="SentinelIQ" width="120" />
   <h1>SentinelIQ</h1>
@@ -7,7 +6,9 @@
 
 SentinelIQ runs a panel of specialized LLM agents over a portfolio. They argue,
 stress-test positions, flag cognitive biases in the user's own trading history,
-and hold risky trades for review before they go through.
+and hold risky trades for review before they go through. The premise: a single
+model scoring a trade hides its blind spots, but a panel of agents with different
+mandates surfaces disagreement worth paying attention to.
 
 ## Features
 
@@ -25,6 +26,14 @@ loss aversion and momentum chasing.
 
 **Regret ledger** — Point-in-time state replay, so past decisions can be re-run
 against what was actually knowable then.
+
+## How it works
+
+Each incoming thesis is fanned out to the agent panel in parallel. Every agent
+returns an independent call plus its reasoning; the backend reconciles these into
+a consensus verdict but keeps dissenting opinions attached rather than averaging
+them away. The decision firewall sits between this verdict and trade execution,
+running the stress-test pass before anything is allowed through.
 
 ## Stack
 
@@ -64,15 +73,21 @@ cd backend && node index.js     # http://localhost:3001
 cd frontend && npm run dev      # http://localhost:3000
 ```
 
-## Notes
+## Notes & limitations
 
-Alpha Vantage's free tier caps at 25 requests/day, so historical series are
-cached after first fetch. Agent calls are fanned out in parallel; a full war-room
-round takes roughly a few seconds on the 8B model and longer on 70B.
+- Alpha Vantage's free tier caps at 25 requests/day, so historical series are
+  cached after first fetch.
+- Agent calls are fanned out in parallel; a full war-room round takes roughly a
+  few seconds on the 8B model and longer on 70B.
+- If the agent panel splits without a clear majority, the consensus call defaults
+  to the most conservative (Risk Analyst) position rather than forcing a tie-break.
+- No persistence layer yet — portfolio and trade history reset on backend restart.
+
+## Status
+
+Active side project / hackathon build, not production-hardened. Treat trade
+interception as a demo of the concept, not a substitute for real risk controls.
 
 ## License
 
 MIT
-```
-
-Two things worth adding when you have them: a screenshot or GIF of the war room under the title (it's the single highest-value thing in a hackathon README), and real numbers in the Notes section instead of my placeholders. Also drop the "built for the future of decentralized financial intelligence" line — it promises something the project doesn't do.
