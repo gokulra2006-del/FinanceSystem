@@ -15,6 +15,8 @@ import {
   BrainCircuit, BookOpen, FileText, Lock, ChevronDown, X, Users, MessageSquare, Globe, Swords
 } from "lucide-react";
 
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+
 // Mock User Data with 3 Profiles
 const USERS = {
   user1: {
@@ -91,7 +93,7 @@ function AiSummary({ viewName, contextData }: { viewName: string, contextData: a
     setLoading(true);
     setError(null);
 
-    fetch("http://localhost:3001/api/summarize", {
+    fetch(`${API_BASE}/api/summarize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ viewName, contextData: JSON.parse(contextDataString) })
@@ -200,7 +202,7 @@ export default function Dashboard() {
         ? { username: authUsername, password: authPassword }
         : { username: authUsername, password: authPassword, name: authName, riskTolerance: authRisk };
 
-      const res = await fetch(`http://localhost:3001${endpoint}`, {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -248,7 +250,7 @@ export default function Dashboard() {
   const [finnhubQuote, setFinnhubQuote] = useState<any>(null);
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/live-quote?symbol=TSLA')
+    fetch(`${API_BASE}/api/live-quote?symbol=TSLA`)
       .then(res => res.json())
       .then(data => {
         if (data.success) setFinnhubQuote(data);
@@ -259,7 +261,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const res = await fetch(`http://localhost:3001/api/dashboard/financial-intelligence?userId=${activeUser}`);
+        const res = await fetch(`${API_BASE}/api/dashboard/financial-intelligence?userId=${activeUser}`);
         const data = await res.json();
         if (data.success) {
           setDashboardData(data);
@@ -271,7 +273,7 @@ export default function Dashboard() {
 
     const fetchDemoContract = async () => {
       try {
-        const response = await fetch("http://localhost:3001/api/analyze", {
+        const response = await fetch(`${API_BASE}/api/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ thesis: "I want to buy TSLA because earnings are accelerating and EV adoption is growing.", userId: activeUser, demoMode: true })
@@ -296,7 +298,7 @@ export default function Dashboard() {
     setReplayEvents([]);
     
     try {
-      const res = await fetch(`http://localhost:3001/api/replay`, {
+      const res = await fetch(`${API_BASE}/api/replay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contract, userId: activeUser })
@@ -328,7 +330,7 @@ export default function Dashboard() {
   const fetchRegretLedger = async (userIdToFetch = activeUser) => {
     try {
       setLoadingRegret(true);
-      const res = await fetch(`http://localhost:3001/api/regret-ledger?userId=${userIdToFetch}`);
+      const res = await fetch(`${API_BASE}/api/regret-ledger?userId=${userIdToFetch}`);
       const data = await res.json();
       if (data.success) {
         setRegretData(data);
@@ -342,7 +344,7 @@ export default function Dashboard() {
 
   const handleOpenReplay = async (decisionId: string) => {
     try {
-      const res = await fetch(`http://localhost:3001/api/regret-ledger/${decisionId}/replay?userId=${activeUser}`);
+      const res = await fetch(`${API_BASE}/api/regret-ledger/${decisionId}/replay?userId=${activeUser}`);
       const data = await res.json();
       if (data.success) {
         setSelectedReplay(data.snapshot);
@@ -392,7 +394,7 @@ export default function Dashboard() {
 
   const triggerEvent = async (type: string) => {
     try {
-      const response = await fetch("http://localhost:3001/api/trigger-event", {
+      const response = await fetch(`${API_BASE}/api/trigger-event`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type, userId: activeUser })
@@ -1041,7 +1043,7 @@ function DashboardView({
   const [marketError, setMarketError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/market-data?symbol=TSLA')
+    fetch(`${API_BASE}/api/market-data?symbol=TSLA`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.chartData) {

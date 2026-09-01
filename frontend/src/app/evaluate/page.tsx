@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+
 function EvaluateContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -34,7 +36,7 @@ function EvaluateContent() {
     const performAnalysis = async () => {
       try {
         const isDemo = thesis === "I want to buy TSLA because earnings are accelerating and EV adoption is growing.";
-        const response = await fetch("http://localhost:3001/api/analyze", {
+        const response = await fetch(`${API_BASE}/api/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ thesis, userId, demoMode: isDemo })
