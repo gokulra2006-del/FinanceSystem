@@ -453,19 +453,13 @@ export default function Dashboard() {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {Object.entries(USERS).map(([id, p]) => (
-                <button
+                <div
                   key={id}
-                  onClick={() => { 
-                    setActiveUser(id as any); 
-                    setIsAuthenticated(true);
-                    sessionStorage.setItem("isAuthenticated", "true");
-                    sessionStorage.setItem("activeUser", id);
-                  }}
                   className="group relative text-left p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-base)] hover:border-indigo-500/50 hover:bg-indigo-950/10 transition-all duration-300"
                 >
                   {/* Tooltip trigger (the 'i' icon) */}
-                  <div className="absolute top-4 right-4 z-20 group/tooltip" onClick={(e) => e.stopPropagation()}>
-                    <div className="w-6 h-6 rounded-full border border-[var(--border-strong)] flex items-center justify-center text-[var(--text-muted)] group-hover:text-indigo-400 group-hover:border-indigo-500/50 transition-colors">
+                  <div className="absolute top-4 right-4 z-20 group/tooltip">
+                    <div className="w-6 h-6 rounded-full border border-[var(--border-strong)] flex items-center justify-center text-[var(--text-muted)] group-hover:text-indigo-400 group-hover:border-indigo-500/50 transition-colors cursor-help">
                       <span className="text-xs font-bold font-serif italic">i</span>
                     </div>
                     {/* Tooltip Dropdown */}
@@ -490,7 +484,32 @@ export default function Dashboard() {
                     <div className="flex justify-between"><span>Horizon:</span> <span className="font-mono text-white">{p.horizon}</span></div>
                     <div className="flex justify-between"><span>Portfolio:</span> <span className="font-mono text-white">{p.portfolio.total}</span></div>
                   </div>
-                </button>
+
+                  <div className="mt-5 pt-5 border-t border-[var(--border-subtle)]">
+                    <input 
+                      type="password" 
+                      placeholder="Enter password..." 
+                      className="w-full bg-[#111] border border-[var(--border-strong)] rounded px-3 py-2 text-xs text-white mb-1 focus:outline-none focus:border-indigo-500"
+                    />
+                    <p className="text-[10px] text-[var(--text-muted)] mb-3 text-center tracking-widest uppercase">Demo Password: admin123</p>
+                    <button 
+                      onClick={(e) => {
+                        const input = e.currentTarget.parentElement?.querySelector('input');
+                        if (input?.value === 'admin123') {
+                          setActiveUser(id as any); 
+                          setIsAuthenticated(true);
+                          sessionStorage.setItem("isAuthenticated", "true");
+                          sessionStorage.setItem("activeUser", id);
+                        } else {
+                          alert("Incorrect password. Use the demo password: admin123");
+                        }
+                      }}
+                      className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs py-2 rounded transition-all shadow-[0_0_10px_rgba(79,70,229,0.2)] hover:shadow-[0_0_15px_rgba(79,70,229,0.4)]"
+                    >
+                      Secure Login
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
             

@@ -20,7 +20,7 @@ Better information alone does not produce better decisions. We needed a system t
  
 Most platforms stop at analysis. SentinelIQ introduces the **Decision Lifecycle**:
  
-`Question` → `Evidence` → `Independent Agents` → `Disagreement` → `Adversarial Challenge` → `Personal Context` → `Decision Contract` → `Falsification Conditions` → `Monitoring` → **`Self-Revocation`**
+`Question` -> `Evidence` -> `Independent Agents` -> `Disagreement` -> `Adversarial Challenge` -> `Personal Context` -> `Decision Contract` -> `Falsification Conditions` -> `Monitoring` -> **`Self-Revocation`**
  
 ## Signature Innovation: The Tripwire
  
@@ -85,18 +85,18 @@ The system orchestrates a diverse panel of specialized intelligence nodes:
  
 ---
  
-## 🛠️ How to Test SentinelIQ (Judge Test Guide)
+## How to Test SentinelIQ (Judge Test Guide)
  
 This project consists of a Next.js frontend and an Express/Node.js backend.
  
-### Setupa
-1. **Backend**: `cd backend && npm install && node index.js` (Runs on 3001)
-2. **Frontend**: `cd frontend && npm install && npm run dev` (Runs on 3000)
+### Setup
+1. **Backend**: `cd backend && npm install && node index.js` (Runs on port 3001)
+2. **Frontend**: `cd frontend && npm install && npm run dev` (Runs on port 3000)
  
 ### The 60-Second "Wow" Moment (Demo Flow)
 1. Open the UI at `http://localhost:3000`.
-2. Notice the **User Profile Switcher** on the bottom left. Select **Arjun (Conservative)**.
-3. In the Decision Firewall, click **"Load Demo Thesis"** and then **"Analyze Decision"**.
+2. Notice the **User Profile Switcher** on the bottom left. Select **Arjun (Conservative)** and log in using the demo password.
+3. In the Decision Firewall, click **"Load Demo Thesis"** and then **"Evaluate Thesis"**.
 4. Watch the agents spin up. Notice the **Decision Contract** is created and **Tripwires** are armed. 
 5. Look at the bottom right corner of the screen. Click the **Floating Settings Gear Icon** to open the hidden Demo Control Center.
 6. Click **"Fire Revenue Tripwire"**.
@@ -113,4 +113,4 @@ This project consists of a Next.js frontend and an Express/Node.js backend.
  
 ---
  
-### *Instead of asking "What should I buy?", SentinelIQ asks: "What do I believe, why do I believe it, what would prove me wrong, and what should happen when that occurs?"*
+*Instead of asking "What should I buy?", SentinelIQ asks: "What do I believe, why do I believe it, what would prove me wrong, and what should happen when that occurs?"*
