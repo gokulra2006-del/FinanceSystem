@@ -5,6 +5,7 @@
  * This determines WHICH agents are spun up.
  */
 function classifyIntent(query) {
+    if (!query) query = "";
     const q = query.toLowerCase();
 
     // 1. EMERGENCY_FUND / LIQUIDITY CHECK

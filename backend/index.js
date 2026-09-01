@@ -324,13 +324,13 @@ app.post('/api/integrity-check', (req, res) => {
   }
 });
 
-app.post('/api/replay', (req, res) => {
+app.post('/api/replay', async (req, res) => {
   const { contract, userId } = req.body;
   if (!contract) {
     return res.status(400).json({ success: false, error: 'Contract is required for replay' });
   }
   try {
-    const replayData = runDecisionReplay(contract, userId || 'user1');
+    const replayData = await runDecisionReplay(contract, userId || 'user1');
     res.json({ success: true, ...replayData });
   } catch (err) {
     console.error("Replay failed:", err);

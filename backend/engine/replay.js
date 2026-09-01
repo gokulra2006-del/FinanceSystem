@@ -1,7 +1,7 @@
 const { processQuestion } = require('./orchestrator');
 const { GLOBAL_EVIDENCE_GRAPH } = require('./evidence');
 
-function runDecisionReplay(contract, userId) {
+async function runDecisionReplay(contract, userId) {
     const thesis = contract ? (contract.question || contract.thesis) : "I want to buy TSLA because earnings are accelerating and EV adoption is growing.";
     
     // Preserve original evidence state
@@ -16,7 +16,7 @@ function runDecisionReplay(contract, userId) {
     }
 
     // Step 1, 2, 3: Initial contract evaluation (v1)
-    const v1 = processQuestion(thesis, userId);
+    const v1 = await processQuestion(thesis, userId);
     v1.replayStage = "v1";
 
     // Step 4 & 5: Trigger tripwire (Invalidate EV-014)
@@ -27,7 +27,7 @@ function runDecisionReplay(contract, userId) {
     }
 
     // Step 6 & 7: Generate v2
-    const v2 = processQuestion(thesis, userId);
+    const v2 = await processQuestion(thesis, userId);
     v2.replayStage = "v2";
     v2.contractId = v1.contractId + "-V2";
 
