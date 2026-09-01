@@ -43,7 +43,7 @@ function generateAISummary(agents) {
  * The core Dynamic Orchestrator. 
  * Replaces the hardcoded SentinelIQ response with dynamic analysis.
  */
-function processQuestion(question, userId) {
+async function processQuestion(question, userId) {
     // 1. Classify the Intent
     const intentData = classifyIntent(question);
     
@@ -340,6 +340,21 @@ function processQuestion(question, userId) {
         "Technology exposure exceeds your maximum portfolio limit."
     ] : [];
 
+    // Call ML Microservice for Intent & Sentiment inference
+    let mlPrediction = { label: "Unknown", confidence: 0 };
+    try {
+        const mlRes = await fetch("http://localhost:8000/predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: question })
+        });
+        if (mlRes.ok) {
+            mlPrediction = await mlRes.json();
+        }
+    } catch (e) {
+        console.error("ML Microservice not available:", e.message);
+    }
+
     // Construct the payload
     const finalConfidence = evidenceData.decisionConfidence;
     const contract = {
@@ -354,6 +369,7 @@ function processQuestion(question, userId) {
         confidence: finalConfidence,
         confidenceBreakdown: evidenceData,
         aiSummary: generateAISummary(agents),
+        mlSentiment: mlPrediction,
         provenanceGraph: JSON.parse(JSON.stringify(GLOBAL_EVIDENCE_GRAPH)),
         investorFit: Math.max(0, 100 - (confidencePenalty * 1.5)),
         positionSuggestion: intentData.requiresContract ? (finalConfidence > 80 ? "Full Allocation" : "Quarter Position") : "N/A",

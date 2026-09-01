@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   FileWarning, ArrowLeft, RefreshCw, AlertTriangle, Shield, CheckCircle2,
-  Activity, Sparkles
+  Activity, Sparkles, BrainCircuit
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -140,6 +140,15 @@ function EvaluateContent() {
                   <span className="text-xl font-medium text-white/90 leading-snug">
                     {contract.answer}
                   </span>
+                  
+                  {contract.mlSentiment && contract.mlSentiment.label !== "Unknown" && (
+                    <div className="ml-auto px-3 py-1.5 rounded-full border border-indigo-500/30 bg-indigo-950/40 flex items-center gap-2">
+                      <BrainCircuit className="w-4 h-4 text-indigo-400" />
+                      <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider">
+                        ML Sentiment: <span className={contract.mlSentiment.label === 'Positive' ? 'text-green-400' : contract.mlSentiment.label === 'Negative' ? 'text-red-400' : 'text-gray-300'}>{contract.mlSentiment.label} ({contract.mlSentiment.confidence}%)</span>
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="text-[var(--text-secondary)] bg-[var(--bg-base)] p-4 rounded-lg mt-4 border border-[var(--border-subtle)]">
                   <span className="font-bold text-[10px] uppercase tracking-widest text-[var(--text-muted)] block mb-1">EVALUATED THESIS</span> 

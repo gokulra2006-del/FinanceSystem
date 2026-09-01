@@ -56,30 +56,30 @@ app.post('/api/register', (req, res) => {
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   const user = USER_PROFILES[username];
-  
+
   if (!user) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
-  
+
   // Simple plain-text password check for demo purposes
   if (user.password === password || (["user1", "user2", "user3"].includes(username) && password === "admin123")) {
     return res.json({ success: true, user, userId: username });
   }
-  
+
   return res.status(401).json({ error: 'Invalid credentials' });
 });
 // ---------------------------------
 
-app.post('/api/analyze', (req, res) => {
+app.post('/api/analyze', async (req, res) => {
   const { thesis, userId, demoMode } = req.body;
   if (!thesis) return res.status(400).json({ error: 'Thesis is required' });
 
-  setTimeout(() => {
+  setTimeout(async () => {
     if (demoMode) {
-        res.json({ success: true, contract: generateContract(userId) });
+      res.json({ success: true, contract: generateContract(userId) });
     } else {
-        const dynamicContract = processQuestion(thesis, userId);
-        res.json({ success: true, contract: dynamicContract });
+      const dynamicContract = await processQuestion(thesis, userId);
+      res.json({ success: true, contract: dynamicContract });
     }
   }, 3500);
 });
@@ -111,7 +111,7 @@ app.post('/api/summarize', async (req, res) => {
         body: JSON.stringify({
           "model": model,
           "messages": [
-            {"role": "user", "content": prompt}
+            { "role": "user", "content": prompt }
           ]
         })
       });
@@ -130,7 +130,7 @@ app.post('/api/summarize', async (req, res) => {
   }
 
   console.error("All Groq models failed. Last error:", lastError);
-  
+
   const mockSummaries = {
     "dashboard": "The portfolio shows strong growth led by tech allocations, with risk exposure remaining within conservative limits. No immediate rebalancing is required.",
     "firewall": "The Decision Firewall has intercepted a high-risk trade proposal due to excessive concentration in volatile assets. Awaiting manual override.",
@@ -139,27 +139,27 @@ app.post('/api/summarize', async (req, res) => {
     "mirror": "Behavioral analysis indicates a slight tendency towards momentum chasing in recent trades. Recommended action: adhere to entry criteria.",
     "regret": "Regret analysis highlights a missed opportunity in energy sectors last quarter, but overall performance remains resilient against drawdowns."
   };
-  
+
   const fallbackSummary = mockSummaries[viewName] || "AI systems are currently operating in offline mode. Local analysis indicates stable metrics with no critical alerts.";
 
-  res.json({ 
-    summary: `[MOCK AI] ${fallbackSummary}`, 
-    modelUsed: "local-mock-fallback" 
+  res.json({
+    summary: `[MOCK AI] ${fallbackSummary}`,
+    modelUsed: "local-mock-fallback"
   });
 });
 
 app.post('/api/trigger-event', (req, res) => {
   const { type, userId } = req.body;
-  
+
   if (type === 'TRIPWIRE_FIRE') {
     // Process the question to get the deterministic graph and agents
     const contract = processQuestion("I want to buy TSLA because earnings are accelerating and EV adoption is growing.", userId);
-    
+
     // Invalidate the primary evidence
     const targetEvidence = contract.provenanceGraph.find(e => e.evidenceId === "EV-014");
     if (targetEvidence) {
-        targetEvidence.status = "SUPERSEDED";
-        targetEvidence.reliability = 0; // It's no longer valid
+      targetEvidence.status = "SUPERSEDED";
+      targetEvidence.reliability = 0; // It's no longer valid
     }
 
     const context = enrichWithContext(userId, { intent: "STOCK_ANALYSIS", requiresContract: true });
@@ -178,17 +178,17 @@ app.post('/api/trigger-event', (req, res) => {
     contract.thesis = "Previous growth thesis is no longer valid. Core revenue growth fell below the 8% falsification threshold (11% -> 6.5%).";
     contract.thesisVersion = "v2";
     contract.thesisHistory.push({
-        version: "v2",
-        status: "INVALIDATED",
-        timestamp: new Date().toISOString(),
-        confidence: newEvidenceData.decisionConfidence,
-        reason: "Revenue growth fell below thesis threshold (11% -> 6.5%)."
+      version: "v2",
+      status: "INVALIDATED",
+      timestamp: new Date().toISOString(),
+      confidence: newEvidenceData.decisionConfidence,
+      reason: "Revenue growth fell below thesis threshold (11% -> 6.5%)."
     });
-    
+
     // Update the tripwire state
     contract.tripwires[0].status = "TRIGGERED";
     contract.tripwires[0].lastEvaluatedValue = "6.5%";
-    
+
     // Update continuous thesis tracker for invalidated state
     const prevSnapshot = (THESIS_MEMORY_LEDGER[userId] && THESIS_MEMORY_LEDGER[userId]["TSLA"] && THESIS_MEMORY_LEDGER[userId]["TSLA"][0]) || null;
     contract.thesisEvolution = evaluateThesisEvolution(prevSnapshot, contract, "TSLA");
@@ -199,16 +199,16 @@ app.post('/api/trigger-event', (req, res) => {
     // Update challenger agent in agents list
     const challengerAgent = contract.agents.find(a => a.name === "Evidence Challenger");
     if (challengerAgent) {
-        challengerAgent.status = "bearish";
-        challengerAgent.message = newChallengeData.challengeSummary;
+      challengerAgent.status = "bearish";
+      challengerAgent.message = newChallengeData.challengeSummary;
     }
-    
+
     return res.json({ success: true, contract });
   }
-  
+
   if (type === 'DATA_FAILURE') {
-    return res.json({ 
-      success: false, 
+    return res.json({
+      success: false,
       status: 'CANNOT CONCLUDE',
       reason: 'Two critical evidence sources are unavailable and the remaining evidence does not meet the minimum confidence quorum. 3/5 required channels active.',
       dataCompleteness: 35
@@ -218,12 +218,12 @@ app.post('/api/trigger-event', (req, res) => {
   res.json({ success: false, error: 'Unknown event' });
 });
 
-const { 
-  SHADOW_DECISION_LEDGER, 
-  computeRegretSummary, 
-  getBehavioralRegretInsights, 
-  getDecisionReplaySnapshot, 
-  recordDecisionContract 
+const {
+  SHADOW_DECISION_LEDGER,
+  computeRegretSummary,
+  getBehavioralRegretInsights,
+  getDecisionReplaySnapshot,
+  recordDecisionContract
 } = require('./engine/regret');
 
 // ---------------- FEATURE 8: REGRET LEDGER API ----------------
@@ -310,7 +310,7 @@ app.get('/api/users', (req, res) => {
 
 app.post('/api/integrity-check', (req, res) => {
   const { contract, userId } = req.body;
-  
+
   if (!contract || !userId) {
     return res.status(400).json({ success: false, error: 'Contract and userId are required' });
   }
@@ -342,7 +342,7 @@ app.get('/api/dashboard/financial-intelligence', (req, res) => {
   const userId = req.query.userId || 'user1';
   // Use deterministic base from existing context logic
   const { user } = enrichWithContext(userId, { intent: "STOCK_ANALYSIS", agents: [] });
-  
+
   // 1. Portfolio Trend (Deterministic mock over time for the demo)
   const baseValue = 100000;
   const portfolioTrend = Array.from({ length: 14 }).map((_, i) => ({
