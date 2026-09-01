@@ -78,7 +78,7 @@ function EvaluateContent() {
               <Activity className="w-5 h-5 text-indigo-400" /> Running Intelligence Network
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {['Signal Core', 'Fundamental Evidence', 'Macro & Sector', 'Portfolio Risk', 'Behavioral Mirror', 'Quantum Predictor', 'Devil\'s Advocate', 'Adjudicator'].map((agent, i) => (
+              {['Signal Core', 'Fundamental Evidence', 'Macro & Sector', 'Portfolio Risk', 'Behavioral Mirror', 'ML Sentiment Engine', 'Quantum Predictor', 'Devil\'s Advocate'].map((agent, i) => (
                 <div key={agent} className={`p-4 rounded-lg border transition-all duration-500 ${processingStage > i ? 'bg-indigo-900/20 border-indigo-500/30' :
                   processingStage === i ? 'bg-indigo-950/30 border-indigo-500/50 animate-pulse' :
                     'bg-[var(--bg-base)] border-[var(--border-subtle)] opacity-50'
@@ -152,6 +152,49 @@ function EvaluateContent() {
                     </div>
                   )}
                 </div>
+
+                {/* ML Sentiment Probabilities Breakdown */}
+                {contract.mlSentiment && contract.mlSentiment.probabilities && contract.mlSentiment.label !== "Unknown" && (
+                  <div className="mt-3 p-3 rounded-lg bg-indigo-950/30 border border-indigo-500/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <BrainCircuit className="w-3.5 h-3.5 text-indigo-400" />
+                        <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-wider">Neural NLP Probabilities (DistilBERT safetensors)</span>
+                      </div>
+                      <span className="text-[10px] text-[var(--text-muted)] font-mono">Microservice port 8000</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <div className="flex justify-between text-[11px] mb-1">
+                          <span className="text-red-400 font-medium">Negative</span>
+                          <span className="font-mono text-white font-bold">{contract.mlSentiment.probabilities.Negative}%</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-red-500 rounded-full transition-all duration-500" style={{ width: `${contract.mlSentiment.probabilities.Negative}%` }}></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-[11px] mb-1">
+                          <span className="text-gray-300 font-medium">Neutral</span>
+                          <span className="font-mono text-white font-bold">{contract.mlSentiment.probabilities.Neutral}%</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-gray-400 rounded-full transition-all duration-500" style={{ width: `${contract.mlSentiment.probabilities.Neutral}%` }}></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-[11px] mb-1">
+                          <span className="text-green-400 font-medium">Positive</span>
+                          <span className="font-mono text-white font-bold">{contract.mlSentiment.probabilities.Positive}%</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${contract.mlSentiment.probabilities.Positive}%` }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="text-[var(--text-secondary)] bg-[var(--bg-base)] p-4 rounded-lg mt-4 border border-[var(--border-subtle)]">
                   <span className="font-bold text-[10px] uppercase tracking-widest text-[var(--text-muted)] block mb-1">EVALUATED THESIS</span> 
                   <span className="text-white">"{contract.question || contract.thesis}"</span>

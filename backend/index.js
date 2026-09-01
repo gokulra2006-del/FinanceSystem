@@ -19,8 +19,8 @@ const { runIntegrityChecks } = require('./engine/integrity');
 const { runDecisionReplay } = require('./engine/replay');
 
 // Helper to generate personalized contract based on the user (routed through the orchestrator)
-const generateContract = (userId) => {
-  return processQuestion("I want to buy TSLA because earnings are accelerating and EV adoption is growing.", userId);
+const generateContract = async (userId) => {
+  return await processQuestion("I want to buy TSLA because earnings are accelerating and EV adoption is growing.", userId);
 };
 
 // --- AUTHENTICATION ENDPOINTS ---
@@ -75,13 +75,19 @@ app.post('/api/analyze', async (req, res) => {
   if (!thesis) return res.status(400).json({ error: 'Thesis is required' });
 
   setTimeout(async () => {
-    if (demoMode) {
-      res.json({ success: true, contract: generateContract(userId) });
-    } else {
-      const dynamicContract = await processQuestion(thesis, userId);
-      res.json({ success: true, contract: dynamicContract });
+    try {
+      if (demoMode) {
+        const demoContract = await generateContract(userId);
+        res.json({ success: true, contract: demoContract });
+      } else {
+        const dynamicContract = await processQuestion(thesis, userId);
+        res.json({ success: true, contract: dynamicContract });
+      }
+    } catch (err) {
+      console.error("Analysis error:", err);
+      res.status(500).json({ success: false, error: err.message });
     }
-  }, 3500);
+  }, demoMode ? 500 : 3500);
 });
 
 app.post('/api/summarize', async (req, res) => {
@@ -148,12 +154,12 @@ app.post('/api/summarize', async (req, res) => {
   });
 });
 
-app.post('/api/trigger-event', (req, res) => {
+app.post('/api/trigger-event', async (req, res) => {
   const { type, userId } = req.body;
 
   if (type === 'TRIPWIRE_FIRE') {
     // Process the question to get the deterministic graph and agents
-    const contract = processQuestion("I want to buy TSLA because earnings are accelerating and EV adoption is growing.", userId);
+    const contract = await processQuestion("I want to buy TSLA because earnings are accelerating and EV adoption is growing.", userId);
 
     // Invalidate the primary evidence
     const targetEvidence = contract.provenanceGraph.find(e => e.evidenceId === "EV-014");

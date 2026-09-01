@@ -350,6 +350,14 @@ async function processQuestion(question, userId) {
         });
         if (mlRes.ok) {
             mlPrediction = await mlRes.json();
+            if (mlPrediction.label && mlPrediction.label !== "Unknown") {
+                agents.push({
+                    name: "ML Sentiment Engine",
+                    role: "NLP Classification",
+                    status: mlPrediction.label === "Positive" ? "bullish" : mlPrediction.label === "Negative" ? "bearish" : "neutral",
+                    message: `Transformer NLP inference (${mlPrediction.label}, ${mlPrediction.confidence}% confidence) classified the thesis sentiment.`
+                });
+            }
         }
     } catch (e) {
         console.error("ML Microservice not available:", e.message);

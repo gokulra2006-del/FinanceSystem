@@ -8,3 +8,4 @@ build/
 *.safetensors
 venv/
 __pycache__/
+scratch/
