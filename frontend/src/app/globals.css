@@ -1,0 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+:root {
+  --bg-base: #030305;
+  --bg-surface: #0a0a0c;
+  --bg-surface-elevated: #111114;
+  --bg-surface-highlight: #1a1a1f;
+  
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-strong: rgba(255, 255, 255, 0.1);
+  
+  --accent-indigo: #4f46e5;
+  --accent-purple: #9333ea;
+  --accent-green: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-red: #ef4444;
+}
+
+@layer base {
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Premium Panel Utility */
+.premium-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Glassmorphism for floating overlays */
+.premium-glass {
+  background: rgba(10, 10, 12, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-strong);
+}
+
+/* Glowing Top Border Effect */
+.glow-border-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.8), transparent);
+  opacity: 0.5;
+}
+
+/* Void state animation */
+.strike-through-void {
+  position: relative;
+}
+.strike-through-void::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--accent-red);
+  transform: translateY(-50%);
+  animation: strike 0.3s ease-out forwards;
+}
+
+@keyframes strike {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+/* Pulse Glow for Analyzing States */
+.animate-pulse-glow {
+  animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 15px rgba(79, 70, 229, 0.2); }
+  50% { opacity: 0.6; box-shadow: 0 0 5px rgba(79, 70, 229, 0.05); }
+}
+
+/* Custom scrollbar for premium feel */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #222;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
