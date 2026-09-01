@@ -11,7 +11,7 @@ import {
   Shield, Activity, Briefcase, User as UserIcon, Settings, LogOut,
   ChevronRight, TrendingUp, AlertTriangle, FileWarning, XCircle, Database,
   CheckCircle2, Clock, GitCommit, Search, Menu, BarChart2, RefreshCw,
-  History, Undo2, Scale, ArrowRight, Eye, GitBranch, Zap, Flame, ShieldAlert, PlayCircle, Sparkles
+  History, Undo2, Scale, ArrowRight, Eye, EyeOff, GitBranch, Zap, Flame, ShieldAlert, PlayCircle, Sparkles
 } from "lucide-react";
 
 // Mock User Data with 3 Profiles
@@ -158,6 +158,7 @@ function AiSummary({ viewName, contextData }: { viewName: string, contextData: a
 export default function Dashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeUser, setActiveUser] = useState<"user1" | "user2" | "user3">("user1");
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const savedAuth = sessionStorage.getItem("isAuthenticated");
@@ -486,11 +487,23 @@ export default function Dashboard() {
                   </div>
 
                   <div className="mt-5 pt-5 border-t border-[var(--border-subtle)]">
-                    <input 
-                      type="password" 
-                      placeholder="Enter password..." 
-                      className="w-full bg-[#111] border border-[var(--border-strong)] rounded px-3 py-2 text-xs text-white mb-1 focus:outline-none focus:border-indigo-500"
-                    />
+                    <div className="relative mb-1">
+                      <input 
+                        type={showPasswords[id] ? "text" : "password"} 
+                        placeholder="Enter password..." 
+                        className="w-full bg-[#111] border border-[var(--border-strong)] rounded px-3 py-2 pr-10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                      />
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] hover:text-white transition-colors"
+                      >
+                        {showPasswords[id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                     <p className="text-[10px] text-[var(--text-muted)] mb-3 text-center tracking-widest uppercase">Demo Password: admin123</p>
                     <button 
                       onClick={(e) => {
@@ -550,9 +563,9 @@ export default function Dashboard() {
         </nav>
 
         {/* User Profile Switcher */}
-        <div className="p-4 border-t border-[var(--border-strong)] bg-[var(--bg-surface-highlight)]">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm font-bold shadow-lg">
+        <div className="p-4 border-t border-[var(--border-strong)] bg-[var(--bg-surface-highlight)] flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm font-bold shadow-lg shrink-0">
               {user.name.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
@@ -567,8 +580,19 @@ export default function Dashboard() {
               </select>
               <p className="text-xs text-[var(--text-secondary)] truncate">{user.profile} Investor</p>
             </div>
+            <button 
+              onClick={() => {
+                sessionStorage.removeItem("isAuthenticated");
+                sessionStorage.removeItem("activeUser");
+                setIsAuthenticated(false);
+              }}
+              title="Sign Out"
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/10 text-[var(--text-secondary)] hover:text-red-400 transition-colors shrink-0"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
-          <div className="flex justify-between text-[11px] text-[var(--text-muted)] mt-2 pt-2 border-t border-[var(--border-subtle)]">
+          <div className="flex justify-between text-[11px] text-[var(--text-muted)] pt-2 border-t border-[var(--border-subtle)]">
             <span>Risk: <strong className={user.riskTolerance === 'High' ? 'text-amber-500' : 'text-green-500'}>{user.riskTolerance}</strong></span>
             <span>Horizon: <strong>{user.horizon}</strong></span>
           </div>
