@@ -11,7 +11,7 @@ app.use(express.json());
 
 const { processQuestion } = require('./engine/orchestrator');
 const { GLOBAL_EVIDENCE_GRAPH, computeConfidence } = require('./engine/evidence');
-const { enrichWithContext } = require('./engine/context');
+const { enrichWithContext, USER_PROFILES, registerUser } = require('./engine/context');
 const { evaluateEvidenceChallenge } = require('./engine/challenge');
 const { evaluateThesisEvolution, THESIS_MEMORY_LEDGER, getThesisHistoryForUser } = require('./engine/tracker');
 const { runDecisionStressTest } = require('./engine/stressTest');
@@ -22,6 +22,53 @@ const { runDecisionReplay } = require('./engine/replay');
 const generateContract = (userId) => {
   return processQuestion("I want to buy TSLA because earnings are accelerating and EV adoption is growing.", userId);
 };
+
+// --- AUTHENTICATION ENDPOINTS ---
+app.post('/api/register', (req, res) => {
+  const { username, password, name, riskTolerance } = req.body;
+  if (!username || !password || !name) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  if (USER_PROFILES[username]) {
+    return res.status(409).json({ error: 'Username already exists' });
+  }
+
+  // Map simple risk string to a mock profile object
+  let profileName = "Balanced";
+  let horizon = "Medium-term";
+  if (riskTolerance === "Low") {
+    profileName = "Conservative"; horizon = "Short-term";
+  } else if (riskTolerance === "High") {
+    profileName = "Growth"; horizon = "Long-term";
+  }
+
+  const newUser = registerUser(username, {
+    name,
+    password,
+    profile: profileName,
+    riskTolerance: riskTolerance || "Medium",
+    horizon
+  });
+
+  res.json({ success: true, user: newUser });
+});
+
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body;
+  const user = USER_PROFILES[username];
+  
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+  
+  // Simple plain-text password check for demo purposes
+  if (user.password === password || (["user1", "user2", "user3"].includes(username) && password === "admin123")) {
+    return res.json({ success: true, user, userId: username });
+  }
+  
+  return res.status(401).json({ error: 'Invalid credentials' });
+});
+// ---------------------------------
 
 app.post('/api/analyze', (req, res) => {
   const { thesis, userId, demoMode } = req.body;

@@ -9,6 +9,7 @@
 // Mock Database of user contexts
 const USER_PROFILES = {
     user1: {
+        id: "user1",
         name: "Arjun",
         profile: "Conservative",
         riskTolerance: "Low",
@@ -25,6 +26,7 @@ const USER_PROFILES = {
         }
     },
     user2: {
+        id: "user2",
         name: "Priya",
         profile: "Growth",
         riskTolerance: "High",
@@ -40,6 +42,7 @@ const USER_PROFILES = {
         }
     },
     user3: {
+        id: "user3",
         name: "Karthik",
         profile: "Balanced",
         riskTolerance: "Medium",
@@ -95,4 +98,22 @@ function enrichWithContext(userId, intentData) {
     };
 }
 
-module.exports = { enrichWithContext };
+function registerUser(userId, userData) {
+    USER_PROFILES[userId] = {
+        id: userId,
+        name: userData.name || userId,
+        profile: userData.profile || "Balanced",
+        riskTolerance: userData.riskTolerance || "Medium",
+        horizon: userData.horizon || "Medium-term",
+        password: userData.password, // For auth
+        portfolio: userData.portfolio || { total: "₹0", techExposure: 20, cash: 80 },
+        behavioral: userData.behavioral || { 
+            recentFOMO: false, 
+            panicSells: false,
+            historicalDecisions: []
+        }
+    };
+    return USER_PROFILES[userId];
+}
+
+module.exports = { enrichWithContext, USER_PROFILES, registerUser };

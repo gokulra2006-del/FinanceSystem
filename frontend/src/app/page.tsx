@@ -157,18 +157,68 @@ function AiSummary({ viewName, contextData }: { viewName: string, contextData: a
 
 export default function Dashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeUser, setActiveUser] = useState<"user1" | "user2" | "user3">("user1");
+  const [activeUser, setActiveUser] = useState<string>("user1");
+  const [userObject, setUserObject] = useState<any>(null);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+
+  // Auth Screen State
+  const [authMode, setAuthMode] = useState<"demo" | "login" | "signup">("login");
+  const [authUsername, setAuthUsername] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authName, setAuthName] = useState("");
+  const [authRisk, setAuthRisk] = useState("Medium");
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
 
   useEffect(() => {
     const savedAuth = sessionStorage.getItem("isAuthenticated");
+    const savedUserObj = sessionStorage.getItem("userObject");
     const savedUser = sessionStorage.getItem("activeUser");
-    if (savedAuth === "true" && savedUser) {
+    if (savedAuth === "true" && savedUserObj) {
       setIsAuthenticated(true);
-      setActiveUser(savedUser as any);
+      setUserObject(JSON.parse(savedUserObj));
+      if (savedUser) setActiveUser(savedUser);
     }
   }, []);
-  const user = USERS[activeUser];
+  const handleDemoAuth = (id: string, userObj: any) => {
+    setActiveUser(id);
+    setUserObject(userObj);
+    setIsAuthenticated(true);
+    sessionStorage.setItem("isAuthenticated", "true");
+    sessionStorage.setItem("activeUser", id);
+    sessionStorage.setItem("userObject", JSON.stringify(userObj));
+  };
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setAuthLoading(true);
+    try {
+      const endpoint = authMode === "login" ? "/api/login" : "/api/register";
+      const payload = authMode === "login" 
+        ? { username: authUsername, password: authPassword }
+        : { username: authUsername, password: authPassword, name: authName, riskTolerance: authRisk };
+
+      const res = await fetch(`http://localhost:3001${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || "Authentication failed");
+      }
+
+      handleDemoAuth(data.userId || data.user.id || authUsername, data.user);
+    } catch (err: any) {
+      setAuthError(err.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const user = userObject || USERS[activeUser as keyof typeof USERS] || USERS.user1;
   
   const [currentView, setCurrentView] = useState<"dashboard" | "firewall" | "war-room" | "contracts" | "ledger" | "mirror" | "regret" | "replay">("firewall");
 
@@ -440,8 +490,8 @@ export default function Dashboard() {
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[var(--accent-indigo)] rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-pulse"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-10 animate-pulse" style={{ animationDelay: '2s' }}></div>
         
-        <div className="w-full max-w-4xl relative z-10">
-          <div className="text-center mb-12">
+        <div className="w-full max-w-4xl relative z-10 flex flex-col items-center">
+          <div className="text-center mb-10">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[var(--bg-surface-elevated)] border border-[var(--border-strong)] mb-6 shadow-2xl">
               <Shield className="w-8 h-8 text-[var(--accent-indigo)]" />
             </div>
@@ -449,87 +499,172 @@ export default function Dashboard() {
             <p className="text-[var(--text-secondary)] text-lg">Multi-Agent Autonomous Financial Intelligence</p>
           </div>
 
-          <div className="premium-panel rounded-2xl p-8 border border-[var(--border-strong)] shadow-2xl bg-[var(--bg-surface-elevated)]/80 backdrop-blur-xl">
-            <h2 className="text-sm uppercase tracking-widest font-bold text-[var(--text-muted)] mb-6 text-center">Select Demo Persona to Enter</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {Object.entries(USERS).map(([id, p]) => (
-                <div
-                  key={id}
-                  className="group relative text-left p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-base)] hover:border-indigo-500/50 hover:bg-indigo-950/10 transition-all duration-300"
-                >
-                  {/* Tooltip trigger (the 'i' icon) */}
-                  <div className="absolute top-4 right-4 z-20 group/tooltip">
-                    <div className="w-6 h-6 rounded-full border border-[var(--border-strong)] flex items-center justify-center text-[var(--text-muted)] group-hover:text-indigo-400 group-hover:border-indigo-500/50 transition-colors cursor-help">
-                      <span className="text-xs font-bold font-serif italic">i</span>
-                    </div>
-                    {/* Tooltip Dropdown */}
-                    <div className="absolute bottom-full mb-2 right-0 w-64 p-4 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-strong)] shadow-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 pointer-events-none">
-                      <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-1">{p.profile} Persona</h4>
-                      <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed">
-                        {p.name === 'Arjun' && "Demonstrates risk-mitigation. Automatically configures the Agent War Room with defensive models and tracks 'Recent-Performance' cognitive bias."}
-                        {p.name === 'Priya' && "Demonstrates high-velocity targeting. Deploys momentum/sentiment agents and warns the user against 'Over-Sizing' portfolio risk."}
-                        {p.name === 'Karthik' && "Demonstrates balanced yield generation. Configures Dividend Trackers and monitors the user for 'Loss Aversion' panic selling."}
-                      </p>
-                    </div>
-                  </div>
+          {/* Auth Navigation */}
+          <div className="flex bg-[#111] border border-[var(--border-strong)] rounded-full p-1 mb-8">
+            <button 
+              onClick={() => { setAuthMode("login"); setAuthError(""); }}
+              className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${authMode === 'login' ? 'bg-[var(--accent-indigo)] text-white shadow-lg' : 'text-[var(--text-secondary)] hover:text-white'}`}
+            >
+              Sign In
+            </button>
+            <button 
+              onClick={() => { setAuthMode("signup"); setAuthError(""); }}
+              className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${authMode === 'signup' ? 'bg-[var(--accent-indigo)] text-white shadow-lg' : 'text-[var(--text-secondary)] hover:text-white'}`}
+            >
+              Create Account
+            </button>
+            <button 
+              onClick={() => { setAuthMode("demo"); setAuthError(""); }}
+              className={`px-6 py-2 rounded-full text-sm font-bold transition-all flex items-center gap-2 ${authMode === 'demo' ? 'bg-[var(--accent-indigo)] text-white shadow-lg' : 'text-[var(--text-secondary)] hover:text-white'}`}
+            >
+              <PlayCircle className="w-4 h-4" /> Try Demo
+            </button>
+          </div>
 
-                  <div className="w-12 h-12 rounded-full bg-[var(--bg-surface-highlight)] flex items-center justify-center text-lg font-bold text-white mb-4 group-hover:bg-[var(--accent-indigo)] transition-colors">
-                    {p.name.charAt(0)}
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-1">{p.name}</h3>
-                  <p className="text-xs font-bold uppercase tracking-widest text-indigo-400 mb-4">{p.profile} Investor</p>
-                  
-                  <div className="space-y-2 text-xs text-[var(--text-secondary)]">
-                    <div className="flex justify-between"><span>Risk:</span> <span className="font-mono text-white">{p.riskTolerance}</span></div>
-                    <div className="flex justify-between"><span>Horizon:</span> <span className="font-mono text-white">{p.horizon}</span></div>
-                    <div className="flex justify-between"><span>Portfolio:</span> <span className="font-mono text-white">{p.portfolio.total}</span></div>
-                  </div>
+          {authMode === "demo" ? (
+            <div className="premium-panel rounded-2xl p-8 border border-[var(--border-strong)] shadow-2xl bg-[var(--bg-surface-elevated)]/80 backdrop-blur-xl w-full">
+              <h2 className="text-sm uppercase tracking-widest font-bold text-[var(--text-muted)] mb-6 text-center">Select Demo Persona to Enter</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {Object.entries(USERS).map(([id, p]) => (
+                  <div
+                    key={id}
+                    className="group relative text-left p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-base)] hover:border-indigo-500/50 hover:bg-indigo-950/10 transition-all duration-300"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-[var(--bg-surface-highlight)] flex items-center justify-center text-lg font-bold text-white mb-4 group-hover:bg-[var(--accent-indigo)] transition-colors">
+                      {p.name.charAt(0)}
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-1">{p.name}</h3>
+                    <p className="text-xs font-bold uppercase tracking-widest text-indigo-400 mb-4">{p.profile} Investor</p>
+                    
+                    <div className="space-y-2 text-xs text-[var(--text-secondary)]">
+                      <div className="flex justify-between"><span>Risk:</span> <span className="font-mono text-white">{p.riskTolerance}</span></div>
+                      <div className="flex justify-between"><span>Horizon:</span> <span className="font-mono text-white">{p.horizon}</span></div>
+                      <div className="flex justify-between"><span>Portfolio:</span> <span className="font-mono text-white">{p.portfolio.total}</span></div>
+                    </div>
 
-                  <div className="mt-5 pt-5 border-t border-[var(--border-subtle)]">
-                    <div className="relative mb-1">
-                      <input 
-                        type={showPasswords[id] ? "text" : "password"} 
-                        placeholder="Enter password..." 
-                        className="w-full bg-[#111] border border-[var(--border-strong)] rounded px-3 py-2 pr-10 text-xs text-white focus:outline-none focus:border-indigo-500"
-                      />
+                    <div className="mt-5 pt-5 border-t border-[var(--border-subtle)]">
+                      <div className="relative mb-1">
+                        <input 
+                          type={showPasswords[id] ? "text" : "password"} 
+                          placeholder="Enter password..." 
+                          className="w-full bg-[#111] border border-[var(--border-strong)] rounded px-3 py-2 pr-10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                        />
+                        <button 
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] hover:text-white transition-colors"
+                        >
+                          {showPasswords[id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-[var(--text-muted)] mb-3 text-center tracking-widest uppercase">Demo Password: admin123</p>
                       <button 
-                        type="button"
                         onClick={(e) => {
-                          e.stopPropagation();
-                          setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
+                          const input = e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement;
+                          if (input?.value === 'admin123') {
+                            handleDemoAuth(id, p);
+                          } else {
+                            alert("Incorrect password. Use the demo password: admin123");
+                          }
                         }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] hover:text-white transition-colors"
+                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs py-2 rounded transition-all shadow-[0_0_10px_rgba(79,70,229,0.2)] hover:shadow-[0_0_15px_rgba(79,70,229,0.4)]"
                       >
-                        {showPasswords[id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        Secure Login
                       </button>
                     </div>
-                    <p className="text-[10px] text-[var(--text-muted)] mb-3 text-center tracking-widest uppercase">Demo Password: admin123</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="premium-panel w-full max-w-md rounded-2xl p-8 border border-[var(--border-strong)] shadow-2xl bg-[var(--bg-surface-elevated)]/80 backdrop-blur-xl">
+              <h2 className="text-xl font-bold text-white mb-6 text-center">
+                {authMode === "login" ? "Sign In to SentinelIQ" : "Create Your Account"}
+              </h2>
+              
+              {authError && (
+                <div className="mb-4 p-3 rounded bg-red-900/30 border border-red-500/50 flex items-start gap-2">
+                  <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <span className="text-xs text-red-200">{authError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleAuthSubmit} className="space-y-4">
+                {authMode === "signup" && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1">Full Name</label>
+                      <input 
+                        required
+                        type="text" 
+                        value={authName}
+                        onChange={(e) => setAuthName(e.target.value)}
+                        className="w-full bg-[#111] border border-[var(--border-strong)] rounded px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1">Risk Tolerance</label>
+                      <select 
+                        value={authRisk}
+                        onChange={(e) => setAuthRisk(e.target.value)}
+                        className="w-full bg-[#111] border border-[var(--border-strong)] rounded px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      >
+                        <option value="Low">Low (Conservative)</option>
+                        <option value="Medium">Medium (Balanced)</option>
+                        <option value="High">High (Growth)</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                
+                <div>
+                  <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1">Username</label>
+                  <input 
+                    required
+                    type="text" 
+                    value={authUsername}
+                    onChange={(e) => setAuthUsername(e.target.value)}
+                    className="w-full bg-[#111] border border-[var(--border-strong)] rounded px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                    placeholder="Enter username"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1">Password</label>
+                  <div className="relative">
+                    <input 
+                      required
+                      type={showPasswords['main'] ? "text" : "password"} 
+                      value={authPassword}
+                      onChange={(e) => setAuthPassword(e.target.value)}
+                      className="w-full bg-[#111] border border-[var(--border-strong)] rounded px-4 py-2.5 pr-10 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      placeholder="••••••••"
+                    />
                     <button 
-                      onClick={(e) => {
-                        const input = e.currentTarget.parentElement?.querySelector('input');
-                        if (input?.value === 'admin123') {
-                          setActiveUser(id as any); 
-                          setIsAuthenticated(true);
-                          sessionStorage.setItem("isAuthenticated", "true");
-                          sessionStorage.setItem("activeUser", id);
-                        } else {
-                          alert("Incorrect password. Use the demo password: admin123");
-                        }
-                      }}
-                      className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs py-2 rounded transition-all shadow-[0_0_10px_rgba(79,70,229,0.2)] hover:shadow-[0_0_15px_rgba(79,70,229,0.4)]"
+                      type="button"
+                      onClick={() => setShowPasswords(prev => ({ ...prev, main: !prev['main'] }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] hover:text-white transition-colors"
                     >
-                      Secure Login
+                      {showPasswords['main'] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
-              ))}
+
+                <button 
+                  type="submit"
+                  disabled={authLoading}
+                  className="w-full mt-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3 rounded-lg transition-all shadow-[0_0_15px_rgba(79,70,229,0.3)] hover:shadow-[0_0_20px_rgba(79,70,229,0.5)] disabled:opacity-50"
+                >
+                  {authLoading ? "Authenticating..." : (authMode === "login" ? "Sign In" : "Create Account")}
+                </button>
+              </form>
             </div>
-            
-            <div className="mt-8 text-center text-xs text-[var(--text-muted)] border-t border-[var(--border-subtle)] pt-6">
-              Select a persona to demonstrate how the Agent War Room and Behavioral Mirror physically restructure to protect that specific user's portfolio.
-            </div>
-          </div>
+          )}
         </div>
       </div>
     );
@@ -569,21 +704,28 @@ export default function Dashboard() {
               {user.name.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
-              <select 
-                className="w-full bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer appearance-none truncate"
-                value={activeUser}
-                onChange={(e) => setActiveUser(e.target.value as "user1" | "user2" | "user3")}
-              >
-                <option value="user1" className="bg-[#111]">Arjun (Conservative)</option>
-                <option value="user2" className="bg-[#111]">Priya (Growth)</option>
-                <option value="user3" className="bg-[#111]">Karthik (Balanced)</option>
-              </select>
+              {Object.keys(USERS).includes(activeUser) ? (
+                <select 
+                  className="w-full bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer appearance-none truncate"
+                  value={activeUser}
+                  onChange={(e) => {
+                    handleDemoAuth(e.target.value, USERS[e.target.value as keyof typeof USERS]);
+                  }}
+                >
+                  <option value="user1" className="bg-[#111]">Arjun (Conservative)</option>
+                  <option value="user2" className="bg-[#111]">Priya (Growth)</option>
+                  <option value="user3" className="bg-[#111]">Karthik (Balanced)</option>
+                </select>
+              ) : (
+                <p className="w-full bg-transparent text-sm font-bold text-white truncate">{user.name}</p>
+              )}
               <p className="text-xs text-[var(--text-secondary)] truncate">{user.profile} Investor</p>
             </div>
             <button 
               onClick={() => {
                 sessionStorage.removeItem("isAuthenticated");
                 sessionStorage.removeItem("activeUser");
+                sessionStorage.removeItem("userObject");
                 setIsAuthenticated(false);
               }}
               title="Sign Out"
