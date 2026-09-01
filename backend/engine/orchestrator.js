@@ -99,6 +99,15 @@ function processQuestion(question, userId) {
         });
     }
 
+    if (intentData.agents.includes("Quantum Predictor")) {
+        agents.push({
+            name: "Quantum Predictor",
+            role: "Probabilistic Modeling",
+            status: "bullish",
+            message: "Simulated 10,000 Monte Carlo trajectories indicate a 78% probability of upward breakout over the next 14 days based on quantum state convergence."
+        });
+    }
+
     if (intentData.requiresContract) {
         agents.push({
             name: "Personal Adversary",

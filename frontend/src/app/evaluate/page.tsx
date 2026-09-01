@@ -75,7 +75,7 @@ function EvaluateContent() {
               <Activity className="w-5 h-5 text-indigo-400" /> Running Intelligence Network
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {['Signal Core', 'Fundamental Evidence', 'Macro & Sector', 'Portfolio Risk', 'Behavioral Mirror', 'Adjudicator', 'Devil\'s Advocate'].map((agent, i) => (
+              {['Signal Core', 'Fundamental Evidence', 'Macro & Sector', 'Portfolio Risk', 'Behavioral Mirror', 'Quantum Predictor', 'Devil\'s Advocate', 'Adjudicator'].map((agent, i) => (
                 <div key={agent} className={`p-4 rounded-lg border transition-all duration-500 ${processingStage > i ? 'bg-indigo-900/20 border-indigo-500/30' :
                   processingStage === i ? 'bg-indigo-950/30 border-indigo-500/50 animate-pulse' :
                     'bg-[var(--bg-base)] border-[var(--border-subtle)] opacity-50'

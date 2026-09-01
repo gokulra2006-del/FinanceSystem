@@ -11,7 +11,8 @@ import {
   Shield, Activity, Briefcase, User as UserIcon, Settings, LogOut,
   ChevronRight, TrendingUp, AlertTriangle, FileWarning, XCircle, Database,
   CheckCircle2, Clock, GitCommit, Search, Menu, BarChart2, RefreshCw,
-  History, Undo2, Scale, ArrowRight, Eye, EyeOff, GitBranch, Zap, Flame, ShieldAlert, PlayCircle, Sparkles
+  History, Undo2, Scale, ArrowRight, Eye, EyeOff, GitBranch, Zap, Flame, ShieldAlert, PlayCircle, Sparkles,
+  BrainCircuit, BookOpen, FileText, Lock, ChevronDown, X, Users, MessageSquare, Globe, Swords
 } from "lucide-react";
 
 // Mock User Data with 3 Profiles
@@ -31,7 +32,7 @@ const USERS = {
         { asset: "Bought Tech Stock B", reason: "Chased earnings pop gap-up", return: "-6.1%" }
       ]
     },
-    activeAgents: ['Signal Core', 'Fundamental Evidence', 'Macro & Sector', 'Portfolio Risk', 'Behavioral Mirror', 'Adversarial Agent', 'Evidence Challenger', 'Adjudicator']
+    activeAgents: ['Signal Core', 'Fundamental Evidence', 'Macro & Sector', 'Portfolio Risk', 'Behavioral Mirror', 'Adversarial Agent', 'Evidence Challenger', 'Quantum Predictor', 'Adjudicator']
   },
   user2: {
     name: "Priya", profile: "Growth", riskTolerance: "High", horizon: "Long-term",
@@ -1512,10 +1513,33 @@ function AgentWarRoomView({ user }: { user: any }) {
     { name: 'Sentiment Analysis', role: 'Social & News', desc: 'Scans alternative data and social velocity for high-growth assets.' },
     { name: 'Momentum Tracker', role: 'Price Action', desc: 'High-frequency velocity metrics.' },
     { name: 'Dividend Tracker', role: 'Yield Analysis', desc: 'Tracks yield sustainability and payout ratios for balanced portfolios.' },
+    { name: 'Quantum Predictor', role: 'Probabilistic Modeling', desc: 'Simulates non-linear multi-dimensional Monte Carlo trajectories for futuristic forecasting.' },
     { name: 'Adjudicator', role: 'Synthesis', desc: 'Final node that weighs all evidence to form the Falsifiable Contract.' }
   ];
 
-  const activeAgents = allAgents.filter(a => user.activeAgents.includes(a.name));
+  // Default agents if not explicitly specified on the user object
+  const defaultAgents = ['Signal Core', 'Fundamental Evidence', 'Macro & Sector', 'Portfolio Risk', 'Behavioral Mirror', 'Adversarial Agent', 'Quantum Predictor', 'Adjudicator'];
+  const userAgents = user.activeAgents || defaultAgents;
+
+  const activeAgents = allAgents.filter(a => userAgents.includes(a.name));
+
+  const getAgentIcon = (name: string) => {
+    switch(name) {
+      case 'Signal Core': return <Activity className="w-5 h-5" />;
+      case 'Fundamental Evidence': return <FileText className="w-5 h-5" />;
+      case 'Macro & Sector': return <Globe className="w-5 h-5" />;
+      case 'Portfolio Risk': return <ShieldAlert className="w-5 h-5" />;
+      case 'Behavioral Mirror': return <Users className="w-5 h-5" />;
+      case 'Adversarial Agent': return <Swords className="w-5 h-5" />;
+      case 'Evidence Challenger': return <Search className="w-5 h-5" />;
+      case 'Sentiment Analysis': return <MessageSquare className="w-5 h-5" />;
+      case 'Momentum Tracker': return <TrendingUp className="w-5 h-5" />;
+      case 'Dividend Tracker': return <PieChart className="w-5 h-5" />;
+      case 'Quantum Predictor': return <Zap className="w-5 h-5" />;
+      case 'Adjudicator': return <Scale className="w-5 h-5" />;
+      default: return <Briefcase className="w-5 h-5" />;
+    }
+  };
 
   return (
     <div className="space-y-6 mt-8">
@@ -1526,8 +1550,8 @@ function AgentWarRoomView({ user }: { user: any }) {
         {activeAgents.map((agent, i) => (
           <div key={i} className="premium-panel p-6 rounded-xl border border-[var(--border-strong)] hover:border-indigo-500/50 transition-colors group cursor-default">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:border-indigo-500/30 transition-colors">
-                <Briefcase className="w-5 h-5 text-[var(--text-secondary)] group-hover:text-indigo-400 transition-colors" />
+              <div className="w-10 h-10 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:border-indigo-500/30 transition-colors [&>svg]:text-[var(--text-secondary)] group-hover:[&>svg]:text-indigo-400 [&>svg]:transition-colors">
+                {getAgentIcon(agent.name)}
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white">{agent.name}</h3>

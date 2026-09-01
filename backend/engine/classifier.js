@@ -73,7 +73,7 @@ function classifyIntent(query) {
             intent: "STOCK_ANALYSIS",
             type: "STOCK_ANALYSIS",
             // For a full investment thesis, we run the gauntlet.
-            agents: ["Signal Core", "Fundamental Evidence", "Portfolio Risk", "Behavioral Mirror", "Adversarial Agent", "Adjudicator"],
+            agents: ["Signal Core", "Fundamental Evidence", "Portfolio Risk", "Behavioral Mirror", "Adversarial Agent", "Quantum Predictor", "Adjudicator"],
             requiresContract: true
         };
     }
