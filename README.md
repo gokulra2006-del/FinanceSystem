@@ -103,6 +103,18 @@ The system orchestrates a diverse panel of specialized intelligence nodes:
 
 ---
 
+## AI Sentiment & Intent Inference (ML Microservice)
+ 
+Tripwire is enhanced by a custom **Machine Learning Microservice** running locally via FastAPI. When a user submits a financial thesis, the system performs live Natural Language Processing (NLP) inference to evaluate intent and confidence.
+ 
+* **Architecture**: A specialized `safetensors` model utilizing a `BertForSequenceClassification` pipeline.
+* **Function**: It classifies user text inputs into distinct categories (Negative, Neutral, Positive) alongside exact percentage-based confidence scores.
+* **Integration**: The AI prediction is asynchronously fetched by the backend Orchestrator and permanently attached to the user's Decision Contract as an independent, quantitative "second opinion" on their thesis. 
+ 
+This creates a hybrid intelligence system where LLM-driven multi-agent research is verified against a dedicated quantitative classification model.
+
+---
+
 ## Decision Stress Testing
 
 Tripwire does not only ask whether a decision is correct today.
