@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="frontend/public/logo.png" alt="SentinelIQ" width="120" />
+  
   <h1>SentinelIQ</h1>
   <p><strong>Multi-agent financial intelligence dashboard</strong></p>
 </div>
