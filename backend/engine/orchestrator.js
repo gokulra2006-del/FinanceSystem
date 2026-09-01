@@ -6,6 +6,7 @@ const { recordDecisionContract } = require('./regret');
 const { evaluateEvidenceChallenge } = require('./challenge');
 const { compareAndRecordThesis } = require('./tracker');
 const { runDecisionStressTest } = require('./stressTest');
+const { runDevilsAdvocate } = require('./devilsAdvocate');
 
 /**
  * The core Dynamic Orchestrator. 
@@ -224,6 +225,21 @@ function processQuestion(question, userId) {
         thesis = `Dynamic Analysis: Our intelligence network has parsed the latest filings and market data regarding your query on ${assetName}. Consensus is positive, pointing to underlying strength.`;
     }
 
+    // FEATURE 24: Devil's Advocate / Counterfactual Risk Analysis
+    let adversarialReview = null;
+    if (intentData.intent === "STOCK_ANALYSIS" || intentData.requiresContract) {
+        adversarialReview = runDevilsAdvocate(decision, evidenceData.decisionConfidence, intentData, user, assetName);
+        
+        // Override final decision and confidence based on the adversarial review
+        decision = adversarialReview.finalDecision;
+        verdict = adversarialReview.finalVerdict;
+        
+        // Append Devil's Advocate reason if decision was altered
+        if (adversarialReview.challengeLevel === "CRITICAL" || adversarialReview.challengeLevel === "HIGH") {
+            answer = `${decision} — ${adversarialReview.decisionImpact}`;
+        }
+    }
+
     // Default Tripwires for actionable contracts using the DSL
     const tripwires = intentData.requiresContract ? [
         {
@@ -323,7 +339,8 @@ function processQuestion(question, userId) {
                 { name: "Confirmation Bias", score: 71 },
                 { name: "Over-sizing", score: 64 }
             ]
-        }
+        },
+        adversarialReview: adversarialReview
     };
 
     // FEATURE 21: Evaluate Continuous Thesis Evolution against previous snapshot

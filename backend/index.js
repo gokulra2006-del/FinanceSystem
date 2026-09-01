@@ -37,6 +37,70 @@ app.post('/api/analyze', (req, res) => {
   }, 3500);
 });
 
+app.post('/api/summarize', async (req, res) => {
+  const { viewName, contextData } = req.body;
+  const apiKey = process.env.GROQ_API_KEY;
+
+  if (!apiKey) {
+    return res.status(401).json({ error: 'Groq API Key is missing. Please update backend/.env' });
+  }
+
+  const MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant"
+  ];
+
+  let lastError = null;
+  const prompt = `You are an expert financial analyst AI. Summarize the following data from the "${viewName}" tab of a financial dashboard into a concise 2-3 sentence executive summary. Do not include pleasantries. Data: ${JSON.stringify(contextData)}`;
+
+  for (const model of MODELS) {
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          "model": model,
+          "messages": [
+            {"role": "user", "content": prompt}
+          ]
+        })
+      });
+
+      const data = await response.json();
+      if (data.choices && data.choices.length > 0) {
+        return res.json({ summary: data.choices[0].message.content, modelUsed: model });
+      } else {
+        lastError = data.error?.message || 'Invalid response format';
+        console.warn(`[Groq] Model ${model} failed:`, lastError);
+      }
+    } catch (err) {
+      console.warn(`[Groq] Model ${model} fetch failed:`, err.message);
+      lastError = err.message;
+    }
+  }
+
+  console.error("All Groq models failed. Last error:", lastError);
+  
+  const mockSummaries = {
+    "dashboard": "The portfolio shows strong growth led by tech allocations, with risk exposure remaining within conservative limits. No immediate rebalancing is required.",
+    "firewall": "The Decision Firewall has intercepted a high-risk trade proposal due to excessive concentration in volatile assets. Awaiting manual override.",
+    "war-room": "Agents have reached consensus on the TSLA thesis. The combined confidence score is 84% based on strong earnings velocity.",
+    "ledger": "Evidence logs show a 98.4% data integrity score. Three sources were recently updated and verified by the compliance engine.",
+    "mirror": "Behavioral analysis indicates a slight tendency towards momentum chasing in recent trades. Recommended action: adhere to entry criteria.",
+    "regret": "Regret analysis highlights a missed opportunity in energy sectors last quarter, but overall performance remains resilient against drawdowns."
+  };
+  
+  const fallbackSummary = mockSummaries[viewName] || "AI systems are currently operating in offline mode. Local analysis indicates stable metrics with no critical alerts.";
+
+  res.json({ 
+    summary: `[MOCK AI] ${fallbackSummary}`, 
+    modelUsed: "local-mock-fallback" 
+  });
+});
+
 app.post('/api/trigger-event', (req, res) => {
   const { type, userId } = req.body;
   
@@ -256,6 +320,75 @@ app.get('/api/dashboard/financial-intelligence', (req, res) => {
   });
 });
 
+app.get('/api/market-data', async (req, res) => {
+  const { symbol = 'TSLA' } = req.query;
+  const apiKey = process.env.ALPHAVANTAGE_API_KEY;
+
+  if (!apiKey) {
+    return res.status(500).json({ success: false, error: 'ALPHAVANTAGE_API_KEY is not configured.' });
+  }
+
+  try {
+    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${apiKey}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data['Error Message']) {
+      return res.status(400).json({ success: false, error: data['Error Message'] });
+    }
+
+    if (data['Note'] || data['Information']) {
+      return res.status(429).json({ success: false, error: 'API rate limit exceeded. Please try again later.' });
+    }
+
+    const timeSeries = data['Time Series (Daily)'];
+    if (!timeSeries) {
+      return res.status(500).json({ success: false, error: 'Invalid data received from Alpha Vantage.' });
+    }
+
+    const dates = Object.keys(timeSeries).slice(0, 14).reverse();
+    const chartData = dates.map(date => ({
+      date: date.substring(5),
+      price: parseFloat(timeSeries[date]['4. close'])
+    }));
+
+    res.json({ success: true, symbol, chartData });
+  } catch (err) {
+    console.error("AlphaVantage fetch error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/live-quote', async (req, res) => {
+  const { symbol = 'TSLA' } = req.query;
+  const apiKey = process.env.FINNHUB_API_KEY;
+
+  if (!apiKey) {
+    return res.status(500).json({ success: false, error: 'FINNHUB_API_KEY is not configured.' });
+  }
+
+  try {
+    const url = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.error) {
+      return res.status(400).json({ success: false, error: data.error });
+    }
+
+    res.json({
+      success: true,
+      symbol,
+      price: data.c,
+      change: data.d,
+      percentChange: data.dp
+    });
+  } catch (err) {
+    console.error("Finnhub fetch error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
-  console.log(`SentinelIQ Backend running on port ${PORT}`);
+  console.log(`SentinelIQ Backend running on http://localhost:${PORT}`);
 });

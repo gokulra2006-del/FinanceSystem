@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -10,7 +11,7 @@ import {
   Shield, Activity, Briefcase, User as UserIcon, Settings, LogOut,
   ChevronRight, TrendingUp, AlertTriangle, FileWarning, XCircle, Database,
   CheckCircle2, Clock, GitCommit, Search, Menu, BarChart2, RefreshCw,
-  History, Undo2, Scale, ArrowRight, Eye, GitBranch, Zap, Flame, ShieldAlert, PlayCircle
+  History, Undo2, Scale, ArrowRight, Eye, GitBranch, Zap, Flame, ShieldAlert, PlayCircle, Sparkles
 } from "lucide-react";
 
 // Mock User Data with 3 Profiles
@@ -67,10 +68,105 @@ const USERS = {
     activeAgents: ['Fundamental Evidence', 'Macro & Sector', 'Dividend Tracker', 'Portfolio Risk', 'Behavioral Mirror', 'Evidence Challenger', 'Adjudicator']
   }
 };
+function AiSummary({ viewName, contextData }: { viewName: string, contextData: any }) {
+  const [summary, setSummary] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasStarted, setHasStarted] = useState(false);
+
+  const contextDataString = JSON.stringify(contextData);
+
+  // Clear state when view changes
+  useEffect(() => {
+    setSummary(null);
+    setError(null);
+    setHasStarted(false);
+  }, [viewName, contextDataString]);
+
+  const handleGenerate = () => {
+    if (!contextDataString || contextDataString === '{}' || contextDataString === 'null') return;
+    
+    setHasStarted(true);
+    setLoading(true);
+    setError(null);
+
+    fetch("http://localhost:3001/api/summarize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ viewName, contextData: JSON.parse(contextDataString) })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        setError(data.error);
+      } else {
+        setSummary(data.summary);
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      setError("Failed to generate summary.");
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+  };
+
+  if (!contextDataString || contextDataString === '{}' || contextDataString === 'null') return null;
+
+  return (
+    <div className="mb-6 premium-panel rounded-xl p-6 border border-indigo-500/30 bg-indigo-950/10 glow-border-top relative overflow-hidden">
+      <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+        <Sparkles className="w-24 h-24 text-indigo-400" />
+      </div>
+      <div className="flex items-center justify-between mb-3 relative z-10">
+        <h3 className="text-xs uppercase tracking-widest font-bold text-indigo-400 flex items-center gap-2">
+          <Sparkles className="w-4 h-4" /> AI Page Summary
+        </h3>
+        {(!hasStarted || error) && !loading && (
+          <button 
+            onClick={handleGenerate}
+            className="text-xs font-bold text-indigo-300 bg-indigo-900/30 hover:bg-indigo-900/50 border border-indigo-500/30 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+          >
+            <Sparkles className="w-3 h-3" /> {error ? 'Retry Generation' : 'Generate AI Summary'}
+          </button>
+        )}
+      </div>
+
+      {!hasStarted ? (
+         <div className="text-sm text-[var(--text-muted)] italic">
+           Click the button above to generate a real-time contextual AI summary for this view.
+         </div>
+      ) : loading ? (
+        <div className="space-y-2 animate-pulse">
+          <div className="h-4 bg-indigo-900/40 rounded w-full"></div>
+          <div className="h-4 bg-indigo-900/40 rounded w-5/6"></div>
+        </div>
+      ) : error ? (
+        <div className="text-sm text-red-400 bg-red-950/20 p-3 rounded border border-red-900/30 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" /> {error}
+        </div>
+      ) : (
+        <p className="text-sm text-indigo-100/90 leading-relaxed relative z-10">
+          {summary}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeUser, setActiveUser] = useState<"user1" | "user2" | "user3">("user1");
+
+  useEffect(() => {
+    const savedAuth = sessionStorage.getItem("isAuthenticated");
+    const savedUser = sessionStorage.getItem("activeUser");
+    if (savedAuth === "true" && savedUser) {
+      setIsAuthenticated(true);
+      setActiveUser(savedUser as any);
+    }
+  }, []);
   const user = USERS[activeUser];
   
   const [currentView, setCurrentView] = useState<"dashboard" | "firewall" | "war-room" | "contracts" | "ledger" | "mirror" | "regret" | "replay">("firewall");
@@ -81,6 +177,7 @@ export default function Dashboard() {
   const [integrity, setIntegrity] = useState<any>(null);
   const [showJudgeMode, setShowJudgeMode] = useState(false);
   const [errorState, setErrorState] = useState<any>(null);
+  const router = useRouter();
   const [showDemoControls, setShowDemoControls] = useState(false);
   const [showWhyScore, setShowWhyScore] = useState(false);
   const [showProvenanceDetails, setShowProvenanceDetails] = useState(false);
@@ -96,6 +193,16 @@ export default function Dashboard() {
   const [isReplaying, setIsReplaying] = useState(false);
   const [replayStage, setReplayStage] = useState(0);
   const [replayEvents, setReplayEvents] = useState<any[]>([]);
+  const [finnhubQuote, setFinnhubQuote] = useState<any>(null);
+
+  useEffect(() => {
+    fetch('http://localhost:3001/api/live-quote?symbol=TSLA')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) setFinnhubQuote(data);
+      })
+      .catch(err => console.error("Finnhub quote error:", err));
+  }, []);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -109,7 +216,25 @@ export default function Dashboard() {
         console.error("Failed to fetch dashboard data:", err);
       }
     };
+
+    const fetchDemoContract = async () => {
+      try {
+        const response = await fetch("http://localhost:3001/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ thesis: "I want to buy TSLA because earnings are accelerating and EV adoption is growing.", userId: activeUser, demoMode: true })
+        });
+        const data = await response.json();
+        if (data.success) {
+          setContract(data.contract);
+        }
+      } catch (err) {
+        console.error("Failed to fetch demo contract:", err);
+      }
+    };
+
     fetchDashboardData();
+    fetchDemoContract();
   }, [activeUser]);
 
   const handleStartReplay = async () => {
@@ -208,46 +333,9 @@ export default function Dashboard() {
   const handleAnalyze = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!thesis) return;
-    setAnalysisState("analyzing");
-    setContract(null);
-    setErrorState(null);
-    setCurrentView("firewall");
-
-    try {
-      const isDemo = thesis === "I want to buy TSLA because earnings are accelerating and EV adoption is growing.";
-      const response = await fetch("http://localhost:3001/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ thesis, userId: activeUser, demoMode: isDemo })
-      });
-      const data = await response.json();
-      
-      setTimeout(async () => {
-        setContract(data.contract);
-        setAnalysisState("complete");
-        
-        // Feature 23: Fetch Integrity Score
-        if (data.contract) {
-            try {
-                const integRes = await fetch("http://localhost:3001/api/integrity-check", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ contract: data.contract, userId: activeUser })
-                });
-                const integData = await integRes.json();
-                if (integData.success) {
-                    setIntegrity(integData.integrity);
-                }
-            } catch(e) {
-                console.error("Integrity fetch failed", e);
-            }
-        }
-      }, Math.max(0, 3500 - (6 * 500)));
-      
-    } catch (err) {
-      console.error(err);
-      setAnalysisState("idle");
-    }
+    
+    // Route to the dedicated evaluate page
+    router.push(`/evaluate?thesis=${encodeURIComponent(thesis)}&userId=${activeUser}`);
   };
 
   const triggerEvent = async (type: string) => {
@@ -275,20 +363,46 @@ export default function Dashboard() {
   const renderView = () => {
     switch (currentView) {
       case "dashboard":
-        return <DashboardView user={user} dashboardData={dashboardData} contract={contract} isReplaying={isReplaying} replayStage={replayStage} handleStartReplay={handleStartReplay} />;
+        return (
+          <>
+            <AiSummary viewName="Dashboard" contextData={dashboardData} />
+            <DashboardView user={user} dashboardData={dashboardData} contract={contract} isReplaying={isReplaying} replayStage={replayStage} handleStartReplay={handleStartReplay} />
+          </>
+        );
       case "ledger":
-        return <EvidenceLedgerView citations={contract ? contract.provenanceGraph : null} onSelectEvidence={setSelectedEvidence} selectedEvidence={selectedEvidence} />;
+        return (
+          <>
+            <AiSummary viewName="Evidence Ledger" contextData={contract ? contract.provenanceGraph : null} />
+            <EvidenceLedgerView citations={contract ? contract.provenanceGraph : null} onSelectEvidence={setSelectedEvidence} selectedEvidence={selectedEvidence} />
+          </>
+        );
       case "mirror":
-        return <BehavioralMirrorView user={user} />;
+        return (
+          <>
+            <AiSummary viewName="Behavioral Mirror" contextData={user.mirror} />
+            <BehavioralMirrorView user={user} />
+          </>
+        );
       case "war-room":
-        return <AgentWarRoomView user={user} />;
+        return (
+          <>
+            <AiSummary viewName="Agent War Room" contextData={{ activeAgents: user.activeAgents, userProfile: user.profile }} />
+            <AgentWarRoomView user={user} />
+          </>
+        );
       case "regret":
       case "replay":
-        return <RegretLedgerView regretData={regretData} loading={loadingRegret} user={user} onReplay={handleOpenReplay} />;
+        return (
+          <>
+            <AiSummary viewName="Regret Ledger" contextData={regretData} />
+            <RegretLedgerView regretData={regretData} loading={loadingRegret} user={user} onReplay={handleOpenReplay} />
+          </>
+        );
       case "firewall":
       default:
         return (
           <div className="space-y-6">
+            <AiSummary viewName="Decision Firewall" contextData={{ userProfile: user.profile, portfolio: user.portfolio, recentActivity: user.activity }} />
             {/* THESIS INPUT */}
             <form onSubmit={handleAnalyze} className="premium-panel rounded-xl overflow-hidden shadow-2xl shadow-indigo-900/10 border-[var(--border-strong)]">
               <div className="p-1 border-b border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] flex items-center justify-between">
@@ -307,1001 +421,11 @@ export default function Dashboard() {
                 <button type="button" onClick={() => setThesis("I want to buy TSLA because earnings are accelerating and EV adoption is growing.")} className="text-xs text-[var(--text-secondary)] hover:text-white transition-colors">
                   Load Demo Thesis
                 </button>
-                <button type="submit" disabled={analysisState === "analyzing" || !thesis} className="px-6 py-2.5 bg-[var(--accent-indigo)] hover:bg-indigo-500 text-white font-semibold rounded-lg text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                  {analysisState === "analyzing" ? (
-                    <><RefreshCw className="w-4 h-4 animate-spin" /> Analyzing...</>
-                  ) : "Evaluate Thesis"}
+                <button type="submit" disabled={!thesis} className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium rounded-full text-sm shadow-[0_0_15px_rgba(79,70,229,0.3)] hover:shadow-[0_0_20px_rgba(79,70,229,0.5)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" /> Evaluate Thesis <ArrowRight className="w-4 h-4 ml-1" />
                 </button>
               </div>
-            </form>
-
-            {/* PROCESSING PIPELINE ANIMATION */}
-            <AnimatePresence>
-              {analysisState === "analyzing" && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                  className="premium-panel rounded-xl p-6 border-[var(--border-strong)]"
-                >
-                  <h3 className="text-xs uppercase tracking-widest font-semibold text-[var(--text-muted)] mb-4 flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-[var(--accent-indigo)]" /> Running Intelligence Network
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {['Signal Core', 'Fundamental Evidence', 'Macro & Sector', 'Portfolio Risk', 'Behavioral Mirror', 'Adversarial Agent', 'Evidence Challenger', 'Adjudicator'].map((agent, i) => (
-                      <div key={agent} className={`p-4 rounded-lg border transition-all duration-500 ${processingStage > i ? 'bg-[var(--bg-surface-highlight)] border-[var(--border-strong)]' :
-                        processingStage === i ? 'bg-indigo-950/30 border-indigo-500/50 animate-pulse-glow' :
-                          'bg-[var(--bg-base)] border-[var(--border-subtle)] opacity-50'
-                        }`}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-bold text-white">{agent}</span>
-                          {processingStage > i ? <CheckCircle2 className="w-4 h-4 text-green-500" /> :
-                            processingStage === i ? <Activity className="w-4 h-4 text-indigo-400 animate-pulse" /> :
-                              <Clock className="w-4 h-4 text-[var(--text-muted)]" />}
-                        </div>
-                        <div className="w-full h-1 bg-[var(--bg-surface-elevated)] rounded-full overflow-hidden">
-                          <div className={`h-full bg-indigo-500 transition-all duration-1000 ${processingStage > i ? 'w-full' : processingStage === i ? 'w-1/2 animate-pulse' : 'w-0'}`} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* ERROR / DEGRADED DATA STATE */}
-            <AnimatePresence>
-              {errorState && analysisState === "error" && (
-                <motion.section
-                  initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                  className="premium-panel rounded-xl p-8 border border-red-900/50 bg-red-950/10 relative overflow-hidden mt-6"
-                >
-                  <div className="absolute top-0 left-0 w-1 h-full bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.8)]"></div>
-                  <div className="flex items-start gap-5">
-                    <div className="p-3 bg-red-500/10 rounded-lg">
-                      <AlertTriangle className="w-8 h-8 text-red-500" />
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-bold text-red-500 tracking-tight">{errorState.status}</h3>
-                      <p className="text-red-400/80 text-sm font-medium tracking-widest uppercase mt-1 mb-4">Data Source Degraded</p>
-                      <div className="bg-[var(--bg-surface-elevated)] p-4 rounded border border-red-900/30 text-sm text-[var(--text-secondary)] leading-relaxed">
-                        {errorState.reason}
-                        <div className="mt-4 pt-4 border-t border-red-900/30 font-semibold text-red-400">
-                          SYSTEM ENFORCEMENT: NO UNCITED CLAIM GENERATED.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.section>
-              )}
-            </AnimatePresence>
-
-            {/* DECISION CONTRACT & WAR ROOM RESULTS */}
-            <AnimatePresence>
-              {contract && analysisState === "complete" && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                  className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6"
-                >
-                  
-                  {/* LEFT COL: DECISION CONTRACT */}
-                  <div className="xl:col-span-2 space-y-6">
-                    <section className={`premium-panel rounded-xl p-8 transition-colors duration-500 ${contract.status === 'VOID' || contract.status === 'INVALIDATED' ? 'border-red-900/50 bg-[var(--bg-base)]' : 'glow-border-top'}`}>
-                      {/* Header */}
-                      <div className="flex justify-between items-start mb-6">
-                        <div>
-                          <div className="flex items-center gap-3 mb-1">
-                            <FileWarning className="w-5 h-5 text-[var(--text-secondary)]" />
-                            <h2 className="text-2xl font-bold text-white tracking-tight">Decision Contract</h2>
-                          </div>
-                          <p className="text-sm text-[var(--text-muted)] font-mono">{contract.contractId}</p>
-                        </div>
-                        <div className={`px-4 py-2 rounded-md text-xs font-bold tracking-widest uppercase border ${
-                          contract.status === 'ACTIVE' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
-                          'bg-red-500/10 text-red-500 border-red-500/30 animate-pulse'
-                        }`}>
-                          Status: {contract.status}
-                        </div>
-                      </div>
-
-                      {/* Question & Answer Section */}
-                      <div className="mb-8 space-y-4">
-                        {/* Decision Question */}
-                        <div className="p-4 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)]">
-                          <div className="text-[10px] uppercase tracking-widest font-bold text-[var(--text-muted)] mb-1">
-                            Decision Question / Input Thesis
-                          </div>
-                          <div className={`text-base md:text-lg font-medium ${contract.status === 'VOID' || contract.status === 'INVALIDATED' ? 'text-[var(--text-muted)] strike-through-void' : 'text-white'}`}>
-                            "{contract.question || contract.thesis}"
-                          </div>
-                        </div>
-
-                        {/* Actual Computed Answer (Prominent YES / NO Display) */}
-                        {(contract.answer || contract.decision || contract.verdict) && (
-                          <div className={`p-5 rounded-lg border transition-all ${
-                            (contract.decision === 'YES' || contract.verdict === 'YES') && contract.status !== 'VOID' && contract.status !== 'INVALIDATED'
-                              ? 'bg-emerald-950/20 border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.12)]'
-                              : (contract.decision === 'NO' || contract.verdict === 'NO' || contract.status === 'VOID' || contract.status === 'INVALIDATED')
-                              ? 'bg-red-950/20 border-red-500/40 shadow-[0_0_20px_rgba(239,68,68,0.12)]'
-                              : 'bg-indigo-950/20 border-indigo-500/30'
-                          }`}>
-                            <div className="flex items-center gap-3 mb-2.5">
-                              <span className="text-[11px] uppercase tracking-widest font-bold text-[var(--text-muted)]">
-                                Evaluated Result:
-                              </span>
-                              <span className={`px-3 py-1 rounded text-xs font-black tracking-widest uppercase inline-flex items-center gap-1.5 ${
-                                (contract.decision === 'YES' || contract.verdict === 'YES') && contract.status !== 'VOID' && contract.status !== 'INVALIDATED'
-                                  ? 'bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.5)]'
-                                  : (contract.decision === 'NO' || contract.verdict === 'NO' || contract.status === 'VOID' || contract.status === 'INVALIDATED')
-                                  ? 'bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.5)]'
-                                  : 'bg-indigo-500 text-white'
-                              }`}>
-                                ANSWER: {contract.status === 'VOID' || contract.status === 'INVALIDATED' ? 'NO' : (contract.decision || contract.verdict || 'EVALUATED')}
-                              </span>
-                            </div>
-                            <div className={`text-base font-semibold leading-relaxed ${
-                              (contract.decision === 'YES' || contract.verdict === 'YES') && contract.status !== 'VOID' && contract.status !== 'INVALIDATED'
-                                ? 'text-emerald-300'
-                                : (contract.decision === 'NO' || contract.verdict === 'NO' || contract.status === 'VOID' || contract.status === 'INVALIDATED')
-                                ? 'text-red-300'
-                                : 'text-indigo-200'
-                            }`}>
-                              {contract.status === 'VOID' || contract.status === 'INVALIDATED'
-                                ? 'NO — Previous growth thesis is no longer valid. Core revenue growth fell below the falsification threshold (11% -> 6.5%).'
-                                : (contract.answer || contract.thesis)}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* ---------------- FEATURE 21: CONTINUOUS THESIS EVOLUTION / DECISION MEMORY ---------------- */}
-                        {contract.thesisEvolution && (
-                          <div className="p-5 bg-[var(--bg-surface-elevated)] border border-[var(--border-strong)] rounded-xl relative overflow-hidden">
-                            <div className="flex justify-between items-start mb-4">
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <History className="w-4 h-4 text-cyan-400" />
-                                  <h4 className="text-xs font-bold tracking-widest text-white uppercase">
-                                    Continuous Thesis Evolution & Memory
-                                  </h4>
-                                  <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                                    contract.thesisEvolution.status === 'FIRST_EVALUATION' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                                    contract.thesisEvolution.status === 'THESIS_EVOLVED' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse' :
-                                    'bg-green-500/10 text-green-400 border border-green-500/20'
-                                  }`}>
-                                    {contract.thesisEvolution.status === 'FIRST_EVALUATION' ? 'FIRST EVALUATION' :
-                                     contract.thesisEvolution.status === 'THESIS_EVOLVED' ? 'THESIS SHIFT DETECTED' : 'NO MATERIAL CHANGE'}
-                                  </span>
-                                </div>
-                                <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
-                                  Comparing current conclusion against historical decision baseline for <strong className="text-white">{contract.thesisEvolution.subject}</strong>.
-                                </p>
-                              </div>
-
-                              {!contract.thesisEvolution.isFirstEvaluation && (
-                                <div className="text-right">
-                                  <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">Thesis Version</span>
-                                  <span className="text-sm font-black text-cyan-400 font-mono">{contract.thesisEvolution.versionTransition}</span>
-                                </div>
-                              )}
-                            </div>
-
-                            {contract.thesisEvolution.isFirstEvaluation ? (
-                              <div className="p-3.5 rounded-lg bg-blue-950/20 border border-blue-900/40 text-xs text-blue-300">
-                                <strong>Initial Synthesis:</strong> {contract.thesisEvolution.summary}
-                              </div>
-                            ) : (
-                              <div className="space-y-4">
-                                {/* Metric Comparison Strips */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                  {/* Decision Shift */}
-                                  <div className={`p-3 rounded-lg border text-xs ${
-                                    contract.thesisEvolution.decisionShift?.changed 
-                                      ? 'bg-amber-950/20 border-amber-900/50 text-amber-200' 
-                                      : 'bg-[var(--bg-base)] border-[var(--border-subtle)] text-white'
-                                  }`}>
-                                    <span className="text-[10px] text-[var(--text-muted)] uppercase block mb-1">Decision Verdict</span>
-                                    <div className="flex items-center gap-2 font-bold font-mono text-sm">
-                                      <span>{contract.thesisEvolution.decisionShift?.previous}</span>
-                                      <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                                      <span className={contract.thesisEvolution.decisionShift?.changed ? 'text-amber-400 font-black' : 'text-white'}>
-                                        {contract.thesisEvolution.decisionShift?.current}
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  {/* Confidence Shift */}
-                                  <div className="p-3 rounded-lg bg-[var(--bg-base)] border border-[var(--border-subtle)] text-xs">
-                                    <span className="text-[10px] text-[var(--text-muted)] uppercase block mb-1">Confidence Score</span>
-                                    <div className="font-bold font-mono text-sm text-white">
-                                      {contract.thesisEvolution.confidenceShift?.formatted}
-                                    </div>
-                                  </div>
-
-                                  {/* Evidence Quality Shift */}
-                                  <div className="p-3 rounded-lg bg-[var(--bg-base)] border border-[var(--border-subtle)] text-xs">
-                                    <span className="text-[10px] text-[var(--text-muted)] uppercase block mb-1">Evidence Quality</span>
-                                    <div className="font-bold font-mono text-sm text-white">
-                                      {contract.thesisEvolution.evidenceQualityShift?.formatted}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Change Drivers List */}
-                                <div className="p-3.5 rounded-lg bg-[var(--bg-base)] border border-[var(--border-subtle)] text-xs">
-                                  <div className="text-[10px] uppercase font-bold tracking-widest text-cyan-400 mb-2 flex items-center gap-1.5">
-                                    <GitBranch className="w-3.5 h-3.5" /> What Changed & Why Did Conclusion Shift?
-                                  </div>
-                                  <ul className="space-y-1.5 pl-1">
-                                    {contract.thesisEvolution.drivers?.map((driver: string, idx: number) => (
-                                      <li key={idx} className="text-[var(--text-secondary)] flex items-start gap-2">
-                                        <span className="text-cyan-400 font-mono font-bold">{idx + 1}.</span>
-                                        <span>{driver}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-
-                                {/* Evidence Diff Chips */}
-                                {((contract.thesisEvolution.evidenceDiff?.added?.length ?? 0) > 0 || 
-                                  (contract.thesisEvolution.evidenceDiff?.superseded?.length ?? 0) > 0) && (
-                                  <div className="flex flex-wrap gap-2 pt-1 text-[10px] font-mono">
-                                    {contract.thesisEvolution.evidenceDiff.added.map((id: string) => (
-                                      <span key={id} className="px-2 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">
-                                        + NEW: {id}
-                                      </span>
-                                    ))}
-                                    {contract.thesisEvolution.evidenceDiff.superseded.map((id: string) => (
-                                      <span key={id} className="px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
-                                        ⚠ SUPERSEDED: {id}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Invalidation Banner if Revoked */}
-                        {(contract.status === 'VOID' || contract.status === 'INVALIDATED') && (
-                          <div className="p-3 bg-red-950/30 border border-red-800/50 rounded-lg text-sm text-red-400 font-semibold flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
-                            <span>⚠️ THESIS INVALIDATED: Contract automatically revoked due to Tripwire failure.</span>
-                          </div>
-                        )}
-
-                        {/* Additional Synthesis Detail (if separate from question and answer) */}
-                        {contract.thesis && contract.thesis !== contract.answer && contract.thesis !== contract.question && (
-                          <div className="p-4 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)] leading-relaxed">
-                            <span className="text-[10px] uppercase tracking-widest font-bold text-[var(--text-muted)] block mb-1">
-                              Intelligence Network Synthesis
-                            </span>
-                            {contract.thesis}
-                          </div>
-                        )}
-
-                        {/* Why your answer is different (Explanation of system adjustment only, no duplicate prefix) */}
-                        {contract.personalizationContext && (
-                          <div className="p-4 bg-indigo-950/20 border border-indigo-900/50 rounded-lg text-xs">
-                            <div className="font-bold text-indigo-300 uppercase tracking-wider text-[11px] mb-1">
-                              Why your answer is different:
-                            </div>
-                            <p className="text-indigo-200/90 leading-relaxed">
-                              {contract.personalizationContext.replace(/^Why your answer is different:\s*/i, '')}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Thesis Version History */}
-                        <div className="pt-2">
-                          <h4 className="text-xs font-semibold tracking-widest text-[var(--text-secondary)] uppercase mb-3 flex items-center gap-2">
-                            <Clock className="w-3 h-3" /> Thesis Version History
-                          </h4>
-                          <div className="space-y-2">
-                            {contract.thesisHistory?.map((history: any, idx: number) => (
-                              <div key={idx} className={`text-xs p-3 rounded border flex items-center justify-between ${
-                                history.status === 'INVALIDATED' ? 'bg-red-950/10 border-red-900/30' : 'bg-[var(--bg-surface-highlight)] border-[var(--border-subtle)]'
-                              }`}>
-                                <div className="flex items-center gap-3">
-                                  <span className={`font-mono font-bold ${history.status === 'INVALIDATED' ? 'text-red-400' : 'text-indigo-400'}`}>{history.version}</span>
-                                  <span className="text-[var(--text-secondary)]">{history.reason}</span>
-                                </div>
-                                <span className={`font-bold tracking-widest ${history.status === 'INVALIDATED' ? 'text-red-500' : 'text-green-500'}`}>{history.status}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* ---------------- FEATURE 23: DECISION INTEGRITY & JUDGE VERIFICATION ---------------- */}
-                      {integrity && (
-                        <div className="mb-8 p-5 bg-[var(--bg-surface-elevated)] border border-[var(--border-strong)] rounded-xl relative overflow-hidden">
-                          <div className="flex justify-between items-center mb-4">
-                            <div className="flex items-center gap-2">
-                              <ShieldAlert className="w-5 h-5 text-emerald-400" />
-                              <h3 className="text-sm font-bold tracking-widest uppercase text-white">Decision Integrity</h3>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="text-xs font-mono text-[var(--text-muted)]">Integrity Score: <span className={integrity.score === 100 ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>{integrity.score}%</span></div>
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase border ${integrity.status === 'VERIFIED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border-amber-500/30'}`}>
-                                ● {integrity.status}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
-                            {integrity.checks.filter((c: any) => c.status === 'PASS').slice(0, 8).map((check: any, idx: number) => (
-                                <div key={idx} className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                                  <span>{check.name} verified</span>
-                                </div>
-                            ))}
-                          </div>
-
-                          <div className="border-t border-[var(--border-subtle)] pt-3">
-                            <button type="button" onClick={() => setShowJudgeMode(!showJudgeMode)} className="text-xs font-semibold text-indigo-300 hover:text-indigo-200 transition-colors flex items-center gap-1.5">
-                              <Shield className="w-3.5 h-3.5" />
-                              {showJudgeMode ? "HIDE JUDGE VERIFICATION" : "WHY THIS DECISION IS TRUSTWORTHY"}
-                            </button>
-                            
-                            <AnimatePresence>
-                              {showJudgeMode && (
-                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mt-4 p-4 rounded-lg bg-[var(--bg-base)] border border-[var(--border-subtle)] overflow-hidden">
-                                  <div className="text-[10px] uppercase font-bold tracking-widest text-[var(--text-muted)] mb-3">Complete Data Lineage</div>
-                                  <div className="flex flex-col gap-2 relative">
-                                    <div className="absolute left-2.5 top-2 bottom-2 w-px bg-[var(--border-strong)] z-0"></div>
-                                    {integrity.lineage.split(' -> ').map((step: string, idx: number) => (
-                                      <div key={idx} className="flex items-center gap-3 z-10 relative">
-                                        <div className="w-5 h-5 rounded-full bg-emerald-950 border border-emerald-500/50 flex items-center justify-center shrink-0">
-                                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                                        </div>
-                                        <span className="text-xs font-mono text-emerald-300 font-bold">{step}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* ---------------- FEATURE 7: CONFIDENCE PROVENANCE & BREAKDOWN ---------------- */}
-                      <div className="mb-8 p-6 bg-[var(--bg-surface-elevated)] border border-[var(--border-strong)] rounded-xl relative overflow-hidden">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold">
-                                Decision Confidence Provenance
-                              </span>
-                              <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-widest">
-                                Deterministic Engine
-                              </span>
-                            </div>
-                            <div className="flex items-baseline gap-4 mt-1">
-                              <span className={`text-4xl font-black tracking-tight ${contract.status === 'VOID' || contract.status === 'INVALIDATED' ? 'text-red-500' : 'text-white'}`}>
-                                {contract.confidence}%
-                              </span>
-                              <span className="text-xs text-[var(--text-secondary)]">
-                                Primary Drag: <strong className="text-orange-400">{contract.confidenceBreakdown?.primaryDrag || "None"}</strong>
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => setShowProvenanceDetails(!showProvenanceDetails)}
-                              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 transition-all flex items-center gap-1.5"
-                            >
-                              <Search className="w-3.5 h-3.5" />
-                              {showProvenanceDetails ? "Hide Provenance Chain" : "Why this confidence?"}
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* 6-Factor Confidence Decomposition Progress Bars */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-4 border-t border-[var(--border-subtle)]">
-                          <div>
-                            <div className="flex justify-between text-xs mb-1 font-medium">
-                              <span className="text-[var(--text-secondary)]">Evidence Strength</span>
-                              <span className="font-bold font-mono text-white">{contract.confidenceBreakdown?.breakdown?.evidenceStrength ?? contract.confidenceBreakdown?.components?.quality}%</span>
-                            </div>
-                            <ProgressBar value={contract.confidenceBreakdown?.breakdown?.evidenceStrength ?? contract.confidenceBreakdown?.components?.quality} color="bg-blue-500" />
-                          </div>
-
-                          <div>
-                            <div className="flex justify-between text-xs mb-1 font-medium">
-                              <span className="text-[var(--text-secondary)]">Agent Agreement</span>
-                              <span className="font-bold font-mono text-white">{contract.confidenceBreakdown?.breakdown?.agentAgreement ?? contract.confidenceBreakdown?.components?.agreement}%</span>
-                            </div>
-                            <ProgressBar value={contract.confidenceBreakdown?.breakdown?.agentAgreement ?? contract.confidenceBreakdown?.components?.agreement} color="bg-emerald-500" />
-                          </div>
-
-                          <div>
-                            <div className="flex justify-between text-xs mb-1 font-medium">
-                              <span className="text-[var(--text-secondary)]">Source Quality</span>
-                              <span className="font-bold font-mono text-white">{contract.confidenceBreakdown?.breakdown?.sourceQuality ?? contract.confidenceBreakdown?.components?.quality}%</span>
-                            </div>
-                            <ProgressBar value={contract.confidenceBreakdown?.breakdown?.sourceQuality ?? contract.confidenceBreakdown?.components?.quality} color="bg-indigo-500" />
-                          </div>
-
-                          <div>
-                            <div className="flex justify-between text-xs mb-1 font-medium">
-                              <span className="text-[var(--text-secondary)]">Data Completeness</span>
-                              <span className="font-bold font-mono text-white">{contract.confidenceBreakdown?.breakdown?.dataCompleteness ?? contract.confidenceBreakdown?.components?.completeness}%</span>
-                            </div>
-                            <ProgressBar value={contract.confidenceBreakdown?.breakdown?.dataCompleteness ?? contract.confidenceBreakdown?.components?.completeness} color="bg-purple-500" />
-                          </div>
-
-                          <div>
-                            <div className="flex justify-between text-xs mb-1 font-medium">
-                              <span className="text-[var(--text-secondary)]">Contradiction Risk</span>
-                              <span className="font-bold font-mono text-orange-400">{contract.confidenceBreakdown?.breakdown?.contradictionRisk ?? contract.confidenceBreakdown?.components?.contradictionRisk}%</span>
-                            </div>
-                            <ProgressBar value={contract.confidenceBreakdown?.breakdown?.contradictionRisk ?? contract.confidenceBreakdown?.components?.contradictionRisk} color="bg-orange-500" />
-                          </div>
-
-                          <div>
-                            <div className="flex justify-between text-xs mb-1 font-medium">
-                              <span className="text-[var(--text-secondary)]">Personalization Fit</span>
-                              <span className="font-bold font-mono text-indigo-300">{contract.confidenceBreakdown?.breakdown?.personalizationFit ?? contract.investorFit}%</span>
-                            </div>
-                            <ProgressBar value={contract.confidenceBreakdown?.breakdown?.personalizationFit ?? contract.investorFit} color="bg-pink-500" />
-                          </div>
-                        </div>
-
-                        {/* Positive & Negative Factors Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 mt-6 border-t border-[var(--border-subtle)]">
-                          <div>
-                            <div className="text-[10px] text-green-400 uppercase tracking-widest mb-3 font-bold flex items-center gap-1.5">
-                              <TrendingUp className="w-3 h-3" /> Positive Contributors
-                            </div>
-                            <div className="space-y-2">
-                              {contract.confidenceBreakdown?.positiveContributors?.map((c: any, i: number) => (
-                                <div key={i} className="p-2.5 rounded bg-[var(--bg-base)] border border-green-900/30 text-xs">
-                                  <div className="flex justify-between items-center mb-1">
-                                    <span className="font-semibold text-white">{c.factor}</span>
-                                    <span className="font-mono text-green-400 font-bold">+{c.weight}%</span>
-                                  </div>
-                                  <p className="text-[11px] text-[var(--text-secondary)]">{c.detail}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-[10px] text-red-400 uppercase tracking-widest mb-3 font-bold flex items-center gap-1.5">
-                              <TrendingUp className="w-3 h-3 rotate-180" /> Negative Drag Factors
-                            </div>
-                            <div className="space-y-2">
-                              {contract.confidenceBreakdown?.negativeDrags?.map((c: any, i: number) => (
-                                <div key={i} className="p-2.5 rounded bg-[var(--bg-base)] border border-red-900/30 text-xs">
-                                  <div className="flex justify-between items-center mb-1">
-                                    <span className="font-semibold text-white">{c.factor}</span>
-                                    <span className="font-mono text-red-400 font-bold">-{c.weight}%</span>
-                                  </div>
-                                  <p className="text-[11px] text-[var(--text-secondary)]">{c.detail}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* EXPANDABLE PROVENANCE REASONING CHAIN & DISAGREEMENT MATRIX */}
-                        <AnimatePresence>
-                          {showProvenanceDetails && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="pt-6 mt-6 border-t border-[var(--border-subtle)] space-y-6"
-                            >
-                              {/* 1. Evidence -> Claim -> Agent -> Counter-Evidence -> Impact Reasoning Chain */}
-                              <div>
-                                <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-3 flex items-center gap-2">
-                                  <GitCommit className="w-3.5 h-3.5 text-[var(--accent-indigo)]" />
-                                  Evidence &rarr; Claim &rarr; Decision Provenance Chain
-                                </h4>
-                                <div className="space-y-3 relative before:absolute before:left-4 before:top-3 before:bottom-3 before:w-0.5 before:bg-indigo-900/50">
-                                  {contract.confidenceBreakdown?.reasoningChain?.map((item: any, idx: number) => (
-                                    <div key={idx} className="relative pl-10">
-                                      <div className="absolute left-2.5 top-3 -translate-x-1/2 w-3 h-3 rounded-full bg-indigo-500 border-2 border-[var(--bg-surface-elevated)] shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>
-                                      <div className="p-3.5 rounded-lg bg-[var(--bg-base)] border border-[var(--border-subtle)] text-xs">
-                                        <div className="flex justify-between items-center mb-1.5">
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-[9px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                                              Step {item.step}: {item.type}
-                                            </span>
-                                            <span className="font-bold text-white">{item.title}</span>
-                                          </div>
-                                          {item.sourceTier && (
-                                            <span className={`text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border ${
-                                              item.sourceTier.includes('PRIMARY') ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                                              item.sourceTier.includes('HIGH QUALITY') ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                                              item.sourceTier.includes('SECONDARY') ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                              'bg-gray-500/10 text-gray-400 border-gray-500/20'
-                                            }`}>
-                                              {item.sourceTier}
-                                            </span>
-                                          )}
-                                          {item.stance && (
-                                            <span className={`text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded ${
-                                              item.stance === 'SUPPORTS' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                                              item.stance === 'OPPOSES' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
-                                              'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                            }`}>
-                                              {item.agentName}: {item.stance}
-                                            </span>
-                                          )}
-                                        </div>
-                                        <p className="text-[var(--text-secondary)] leading-relaxed">{item.statement}</p>
-                                        {item.sourceName && (
-                                          <div className="mt-2 text-[10px] font-mono text-[var(--text-muted)] flex items-center gap-1.5">
-                                            <Database className="w-3 h-3" /> Source: {item.sourceName} (Reliability: {item.reliability}%)
-                                          </div>
-                                        )}
-                                        {item.netImpact && (
-                                          <div className="mt-2 text-[10px] font-bold text-orange-400 font-mono">
-                                            Impact: {item.netImpact}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* 2. Specialized Agent Disagreement Matrix */}
-                              <div>
-                                <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-2 flex items-center gap-2">
-                                  <Activity className="w-3.5 h-3.5 text-orange-400" />
-                                  Specialized Agent Contradiction & Disagreement
-                                </h4>
-                                <div className="p-3 bg-orange-950/20 border border-orange-900/40 rounded-lg text-xs text-orange-300 mb-3">
-                                  {contract.confidenceBreakdown?.agentDisagreementSummary}
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                                  {contract.confidenceBreakdown?.agentDisagreements?.map((agent: any, idx: number) => (
-                                    <div key={idx} className="p-2.5 rounded bg-[var(--bg-base)] border border-[var(--border-subtle)] flex items-center justify-between text-xs">
-                                      <div className="min-w-0 pr-2">
-                                        <span className="font-bold text-white block truncate">{agent.agentName}</span>
-                                        <span className="text-[10px] text-[var(--text-muted)]">{agent.role}</span>
-                                      </div>
-                                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase shrink-0 ${
-                                        agent.stance === 'SUPPORTS' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                                        agent.stance === 'OPPOSES' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
-                                        agent.stance === 'CAUTION' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                                        'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                                      }`}>
-                                        {agent.stance}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* 3. Source Independence Lineage */}
-                              <div>
-                                <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-2 flex items-center gap-2">
-                                  <Database className="w-3.5 h-3.5 text-blue-400" />
-                                  Source Independence Lineage & Duplication Verification
-                                </h4>
-                                <div className="p-3 bg-blue-950/20 border border-blue-900/40 rounded-lg text-xs text-blue-300 flex items-center justify-between">
-                                  <span>{contract.confidenceBreakdown?.sourceIndependenceSummary}</span>
-                                  <span className="font-mono font-bold text-white">Independence: {contract.confidenceBreakdown?.breakdown?.sourceIndependence}%</span>
-                                </div>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-
-                      {/* ---------------- FEATURE 20: EVIDENCE CHALLENGE ENGINE ---------------- */}
-                      {contract.evidenceChallenge && (
-                        <div className="mb-8 p-6 bg-[var(--bg-surface-elevated)] border border-[var(--border-strong)] rounded-xl relative overflow-hidden">
-                          <div className="flex justify-between items-start mb-4">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <Scale className="w-4 h-4 text-amber-400" />
-                                <h4 className="text-xs font-bold tracking-widest text-white uppercase">
-                                  Evidence Challenge Engine
-                                </h4>
-                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                                  contract.evidenceChallenge.status === 'SUPPORTED' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                                  contract.evidenceChallenge.status === 'CHALLENGED' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                                  'bg-red-500/10 text-red-400 border border-red-500/20'
-                                }`}>
-                                  {contract.evidenceChallenge.status}
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
-                                Actively evaluating what evidence could disprove this decision.
-                              </p>
-                            </div>
-
-                            <div className="text-right">
-                              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">Evidence Quality</span>
-                              <span className="text-xl font-black text-white font-mono">{contract.evidenceChallenge.evidenceQuality}%</span>
-                            </div>
-                          </div>
-
-                          {/* Quality Progress Bar */}
-                          <div className="mb-5">
-                            <ProgressBar 
-                              value={contract.evidenceChallenge.evidenceQuality} 
-                              color={contract.evidenceChallenge.evidenceQuality >= 75 ? 'bg-emerald-500' : contract.evidenceChallenge.evidenceQuality >= 50 ? 'bg-amber-500' : 'bg-red-500'} 
-                            />
-                          </div>
-
-                          {/* Challenge Summary Banner */}
-                          <div className={`p-3.5 rounded-lg border text-xs leading-relaxed mb-5 ${
-                            contract.evidenceChallenge.status === 'SUPPORTED' ? 'bg-green-950/20 border-green-900/40 text-green-300' :
-                            contract.evidenceChallenge.status === 'CHALLENGED' ? 'bg-amber-950/20 border-amber-900/40 text-amber-300' :
-                            'bg-red-950/20 border-red-900/40 text-red-300'
-                          }`}>
-                            <strong>Challenger Verdict:</strong> {contract.evidenceChallenge.challengeSummary}
-                          </div>
-
-                          {/* Strongest vs Weakest Grid */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-                            <div className="p-3.5 rounded-lg bg-[var(--bg-base)] border border-[var(--border-subtle)] text-xs">
-                              <div className="text-[10px] uppercase font-bold tracking-widest text-emerald-400 mb-1.5 flex items-center gap-1.5">
-                                <CheckCircle2 className="w-3.5 h-3.5" /> Strongest Supporting Evidence
-                              </div>
-                              <p className="text-white font-medium">{contract.evidenceChallenge.strongestEvidence}</p>
-                            </div>
-
-                            <div className="p-3.5 rounded-lg bg-[var(--bg-base)] border border-[var(--border-subtle)] text-xs">
-                              <div className="text-[10px] uppercase font-bold tracking-widest text-amber-400 mb-1.5 flex items-center gap-1.5">
-                                <AlertTriangle className="w-3.5 h-3.5" /> Most Fragile Evidence Point
-                              </div>
-                              <p className="text-white font-medium">{contract.evidenceChallenge.weakestEvidence}</p>
-                            </div>
-                          </div>
-
-                          {/* Contradictions & Fragility Counts */}
-                          <div className="grid grid-cols-3 gap-3 mb-5 text-center">
-                            <div className="p-2.5 rounded bg-[var(--bg-base)] border border-[var(--border-subtle)]">
-                              <span className="text-[10px] text-[var(--text-muted)] uppercase block">Contradictions</span>
-                              <span className={`text-base font-bold font-mono ${contract.evidenceChallenge.contradictions?.length > 0 ? 'text-orange-400' : 'text-white'}`}>
-                                {contract.evidenceChallenge.contradictions?.length || 0}
-                              </span>
-                            </div>
-                            <div className="p-2.5 rounded bg-[var(--bg-base)] border border-[var(--border-subtle)]">
-                              <span className="text-[10px] text-[var(--text-muted)] uppercase block">Stale Nodes</span>
-                              <span className="text-base font-bold font-mono text-white">
-                                {contract.evidenceChallenge.staleEvidence?.length || 0}
-                              </span>
-                            </div>
-                            <div className="p-2.5 rounded bg-[var(--bg-base)] border border-[var(--border-subtle)]">
-                              <span className="text-[10px] text-[var(--text-muted)] uppercase block">Unsupported</span>
-                              <span className={`text-base font-bold font-mono ${contract.evidenceChallenge.unsupportedClaims?.length > 0 ? 'text-amber-400' : 'text-white'}`}>
-                                {contract.evidenceChallenge.unsupportedClaims?.length || 0}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Contradiction details if any */}
-                          {contract.evidenceChallenge.contradictions?.length > 0 && (
-                            <div className="mb-5 space-y-2">
-                              <div className="text-[10px] uppercase font-bold tracking-widest text-orange-400">
-                                Detected Conflict
-                              </div>
-                              {contract.evidenceChallenge.contradictions.map((c: any, idx: number) => (
-                                <div key={idx} className="p-3 rounded-lg bg-orange-950/20 border border-orange-900/30 text-xs text-orange-200">
-                                  <span className="font-bold text-white block mb-0.5">[{c.primaryNodeId} vs {c.conflictingNodeId}]: {c.conflictType}</span>
-                                  {c.explanation}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* MIRROR Behavioral Challenge if triggered */}
-                          {contract.evidenceChallenge.mirrorBehavioralChallenge && (
-                            <div className="p-4 rounded-lg bg-purple-950/20 border border-purple-900/40 text-xs mb-5">
-                              <div className="text-[10px] uppercase font-bold tracking-widest text-purple-400 mb-1 flex items-center gap-1.5">
-                                <UserIcon className="w-3.5 h-3.5" /> MIRROR Challenge: {contract.evidenceChallenge.mirrorBehavioralChallenge.patternName}
-                              </div>
-                              <p className="text-purple-200 leading-relaxed mb-2">{contract.evidenceChallenge.mirrorBehavioralChallenge.warning}</p>
-                              <div className="text-[11px] text-purple-300 font-medium">
-                                <strong>Rule:</strong> {contract.evidenceChallenge.mirrorBehavioralChallenge.preventativeRule}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Claim -> Evidence Provenance Matrix Table */}
-                          <div>
-                            <div className="text-[10px] uppercase font-bold tracking-widest text-[var(--text-secondary)] mb-2 flex items-center gap-1.5">
-                              <GitCommit className="w-3.5 h-3.5 text-indigo-400" /> Claim &rarr; Evidence Provenance Matrix
-                            </div>
-                            <div className="space-y-2">
-                              {contract.evidenceChallenge.evidenceProvenanceMatrix?.map((row: any, idx: number) => (
-                                <div key={idx} className="p-2.5 rounded bg-[var(--bg-base)] border border-[var(--border-subtle)] text-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2 mb-0.5">
-                                      <span className="font-bold text-white">{row.claim}</span>
-                                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--bg-surface-elevated)] text-indigo-300 font-mono">{row.evidenceId}</span>
-                                    </div>
-                                    <p className="text-[11px] text-[var(--text-muted)]">{row.sourceName} • {row.freshness}</p>
-                                  </div>
-                                  <div className="flex items-center gap-2 shrink-0">
-                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                                      row.result === 'SUPPORTED' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                                      row.result === 'CHALLENGED' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                                      row.result === 'CONTRADICTED' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
-                                      'bg-purple-500/10 text-purple-400 border border-purple-500/20'
-                                    }`}>
-                                      {row.result}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* ---------------- FEATURE 22: DECISION STRESS TEST / ADVERSARIAL SCENARIOS ---------------- */}
-                      {contract.stressTest && (
-                        <div className="mb-8 p-6 bg-[var(--bg-surface-elevated)] border border-[var(--border-strong)] rounded-xl relative overflow-hidden">
-                          <div className="flex justify-between items-start mb-4">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <Flame className="w-4 h-4 text-orange-400" />
-                                <h4 className="text-xs font-bold tracking-widest text-white uppercase">
-                                  Decision Stress Test & Adversarial Scenarios
-                                </h4>
-                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                                  contract.stressTest.status === 'ROBUST' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                                  contract.stressTest.status === 'FRAGILE' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                                  'bg-red-500/10 text-red-400 border border-red-500/20'
-                                }`}>
-                                  {contract.stressTest.status}
-                                </span>
-                                <span className="px-2 py-0.5 rounded text-[9px] font-mono text-[var(--text-muted)] bg-[var(--bg-base)] border border-[var(--border-subtle)]">
-                                  HYPOTHETICAL SIMULATION
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
-                                Proving how much of this decision's evidentiary foundation can fail before the thesis breaks.
-                              </p>
-                            </div>
-
-                            <div className="text-right">
-                              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">Stress Range</span>
-                              <span className="text-sm font-black text-orange-400 font-mono">
-                                {contract.stressTest.baseConfidence}% &rarr; {contract.stressTest.worstCaseConfidence}%
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Fragility Index Progress Bar */}
-                          <div className="mb-5">
-                            <div className="flex justify-between text-xs mb-1 font-medium">
-                              <span className="text-[var(--text-secondary)]">Fragility Index: <strong className="text-white">{contract.stressTest.fragilityScore}/100</strong></span>
-                              <span className={`font-bold uppercase tracking-wider text-[10px] ${
-                                contract.stressTest.status === 'ROBUST' ? 'text-green-400' :
-                                contract.stressTest.status === 'FRAGILE' ? 'text-amber-400' : 'text-red-400'
-                              }`}>
-                                {contract.stressTest.status} FOUNDATION
-                              </span>
-                            </div>
-                            <ProgressBar 
-                              value={contract.stressTest.fragilityScore} 
-                              color={contract.stressTest.fragilityScore < 40 ? 'bg-emerald-500' : contract.stressTest.fragilityScore < 70 ? 'bg-amber-500' : 'bg-red-500'} 
-                            />
-                          </div>
-
-                          {/* Adversarial Scenario Cards Grid */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
-                            {contract.stressTest.scenarios?.map((scen: any) => (
-                              <div key={scen.id} className={`p-3.5 rounded-lg border text-xs transition-all ${
-                                scen.status === 'THESIS_BREAKS' 
-                                  ? 'bg-red-950/20 border-red-900/50 text-red-200' 
-                                  : 'bg-[var(--bg-base)] border-[var(--border-subtle)] text-[var(--text-secondary)]'
-                              }`}>
-                                <div className="flex justify-between items-center mb-1.5">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-[var(--bg-surface-elevated)] text-orange-300">
-                                      {scen.id}
-                                    </span>
-                                    <span className="font-bold text-white">{scen.name}</span>
-                                  </div>
-                                  <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                                    scen.status === 'SURVIVES' 
-                                      ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
-                                      : 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse'
-                                  }`}>
-                                    {scen.status === 'SURVIVES' ? '✓ SURVIVES' : '⚠ THESIS BREAKS'}
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center gap-3 my-2 font-mono text-[11px] bg-[var(--bg-surface-elevated)] p-2 rounded border border-[var(--border-subtle)]">
-                                  <span>Confidence: <strong className="text-white">{scen.confidenceBefore}% &rarr; {scen.confidenceAfter}%</strong></span>
-                                  <span>Verdict: <strong className={scen.decisionBefore !== scen.decisionAfter ? 'text-amber-400' : 'text-white'}>{scen.decisionBefore} &rarr; {scen.decisionAfter}</strong></span>
-                                </div>
-
-                                <p className="text-[11px] leading-relaxed mb-1 text-[var(--text-muted)]">
-                                  <strong className="text-white font-semibold">Stress:</strong> {scen.trigger}
-                                </p>
-                                <p className="text-[11px] leading-relaxed text-[var(--text-secondary)]">
-                                  <strong className="text-orange-400 font-semibold">Outcome:</strong> {scen.reason}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* What Would Break This Decision vs What Would Not Break It */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-[var(--border-subtle)]">
-                            {/* What Would Break It */}
-                            <div className="p-4 rounded-lg bg-red-950/15 border border-red-900/30 text-xs">
-                              <div className="text-[10px] uppercase font-bold tracking-widest text-red-400 mb-2.5 flex items-center gap-1.5">
-                                <AlertTriangle className="w-3.5 h-3.5" /> What Would Break This Decision?
-                              </div>
-                              <ul className="space-y-1.5">
-                                {contract.stressTest.survivalConditions?.map((cond: string, idx: number) => (
-                                  <li key={idx} className="text-red-200/90 flex items-start gap-2 text-[11px]">
-                                    <span className="text-red-400 font-bold font-mono">•</span>
-                                    <span>Failure if: {cond.replace("must remain strictly", "fails").replace("must remain", "fails")}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-
-                            {/* What Would Not Break It */}
-                            <div className="p-4 rounded-lg bg-green-950/15 border border-green-900/30 text-xs">
-                              <div className="text-[10px] uppercase font-bold tracking-widest text-green-400 mb-2.5 flex items-center gap-1.5">
-                                <CheckCircle2 className="w-3.5 h-3.5" /> What Would Not Break It? (Resilience)
-                              </div>
-                              <ul className="space-y-1.5">
-                                {contract.stressTest.nonBreakingFactors?.map((factor: string, idx: number) => (
-                                  <li key={idx} className="text-green-200/90 flex items-start gap-2 text-[11px]">
-                                    <span className="text-green-400 font-bold font-mono">✓</span>
-                                    <span>{factor}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* ---------------- WHAT WOULD CHANGE THIS DECISION? (FALSIFICATION PREDICATES) ---------------- */}
-                      <div className="mb-8 p-5 bg-[var(--bg-surface-elevated)] border border-[var(--border-strong)] rounded-xl">
-                        <h4 className="text-xs font-bold tracking-widest text-[var(--text-secondary)] uppercase mb-4 flex items-center gap-2">
-                          <XCircle className="w-4 h-4 text-red-400" /> What Would Change This Decision? (Falsification Predicates)
-                        </h4>
-                        <div className="space-y-2.5">
-                          {contract.tripwires?.map((tw: any, idx: number) => (
-                            <div key={idx} className={`p-3 rounded-lg border transition-all ${
-                              tw.status === 'TRIGGERED' ? 'bg-red-950/20 border-red-900/50' : 
-                              tw.status === 'WARNING' ? 'bg-amber-950/10 border-amber-900/30' :
-                              tw.status === 'CONTESTED' ? 'bg-orange-950/20 border-orange-900/50' :
-                              tw.status === 'UNKNOWN' ? 'bg-[var(--bg-base)] border-[var(--border-subtle)] opacity-70' :
-                              'bg-[var(--bg-base)] border-[var(--border-strong)]'
-                            }`}>
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <span className={`text-xs font-bold ${tw.status === 'TRIGGERED' ? 'text-red-400' : tw.status === 'CONTESTED' ? 'text-orange-400' : tw.status === 'UNKNOWN' ? 'text-[var(--text-muted)]' : 'text-white'}`}>
-                                    Predicate: {tw.metric} {tw.operator} {tw.threshold}{tw.unit !== 'ratio' && tw.unit !== 'status' ? tw.unit : ''}
-                                  </span>
-                                  <div className="flex gap-4 mt-1 text-[10px] text-[var(--text-secondary)] font-mono">
-                                    <span>Evaluated: <strong className="text-white">{tw.lastEvaluatedValue}</strong></span>
-                                    <span>Source Node: <strong className="text-indigo-400">{tw.sourceEvidenceId}</strong></span>
-                                  </div>
-                                </div>
-                                <span className={`px-2.5 py-1 rounded text-[9px] uppercase font-bold tracking-widest ${
-                                  tw.status === 'SAFE' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 
-                                  tw.status === 'TRIGGERED' ? 'bg-red-500/20 text-red-500 border border-red-500/40 animate-pulse' :
-                                  tw.status === 'CONTESTED' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
-                                  tw.status === 'UNKNOWN' ? 'bg-gray-500/10 text-gray-400 border border-gray-500/20' :
-                                  'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                                }`}>
-                                  {tw.status === 'SAFE' ? 'ARMED / SAFE' : tw.status}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-
-                  {/* RIGHT COL: WAR ROOM & BLAST RADIUS */}
-                  <div className="space-y-6">
-                    {/* Blast Radius */}
-                    <section className="premium-panel rounded-xl p-6 border-[var(--border-strong)]">
-                      <h4 className="text-xs font-semibold tracking-widest text-[var(--text-secondary)] uppercase mb-5">Blast Radius (Portfolio)</h4>
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-sm text-[var(--text-secondary)]">Tech Exposure</span>
-                        <div className="flex items-center gap-3 text-lg font-bold font-mono">
-                          <span className="text-[var(--text-muted)]">{contract.blastRadius.before}</span>
-                          <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />
-                          <span className={activeUser === 'user1' ? 'text-amber-500' : 'text-white'}>{contract.blastRadius.after}</span>
-                        </div>
-                      </div>
-                      <p className={`text-xs p-3 rounded bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] ${activeUser === 'user1' ? 'text-amber-400' : 'text-[var(--text-secondary)]'}`}>
-                        {contract.blastRadius.warning}
-                      </p>
-                    </section>
-
-                    {/* Agent War Room */}
-                    <section className="premium-panel rounded-xl p-6 border-[var(--border-strong)] flex-1">
-                      <div className="flex justify-between items-center mb-5">
-                        <h4 className="text-xs font-semibold tracking-widest text-[var(--text-secondary)] uppercase">Agent Dissent Matrix</h4>
-                        <div className="text-[10px] font-mono text-[var(--text-muted)]">DISSENT INDEX: <span className={contract.confidenceBreakdown.dissentIndex > 40 ? 'text-orange-400 font-bold' : 'text-white'}>{contract.confidenceBreakdown.dissentIndex}/100</span></div>
-                      </div>
-                      
-                      <div className="space-y-1 mt-4">
-                        {contract.agents.map((agent: any, idx: number) => (
-                          <div key={idx} className="group p-3 hover:bg-[var(--bg-surface-highlight)] rounded-lg transition-colors cursor-default border border-transparent hover:border-[var(--border-subtle)]">
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-2">
-                                <span className={`w-1.5 h-1.5 rounded-full ${agent.status === 'bullish' ? 'bg-green-500 shadow-[0_0_5px_#10b981]' : agent.status === 'bearish' ? 'bg-red-500 shadow-[0_0_5px_#ef4444]' : 'bg-amber-500 shadow-[0_0_5px_#f59e0b]'}`}></span>
-                                <span className="text-xs font-bold text-white tracking-wide">{agent.name}</span>
-                              </div>
-                              <span className="text-[9px] uppercase tracking-widest text-[var(--text-muted)]">{agent.role}</span>
-                            </div>
-                            <p className="text-xs text-[var(--text-secondary)] pl-3.5 leading-relaxed">{agent.message}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-
-                    {/* MIRROR: Behavioral Risk Panel */}
-                    {contract.behavioralData && (
-                      <section className="premium-panel rounded-xl p-6 border-[var(--border-strong)]">
-                        <div className="flex justify-between items-center mb-5">
-                          <h4 className="text-xs font-semibold tracking-widest text-[var(--text-secondary)] uppercase flex items-center gap-2">
-                            <UserIcon className="w-4 h-4 text-purple-400" /> Mirror — Behavioral Risk
-                          </h4>
-                          <div className="text-[10px] font-mono text-[var(--text-muted)]">USER ISOLATION: ACTIVE</div>
-                        </div>
-
-                        <div className="mb-4">
-                          <div className="flex justify-between text-xs mb-1">
-                            <span className="text-[var(--text-secondary)]">Behavioral Risk Score</span>
-                            <span className="font-bold text-white">{contract.behavioralData.riskScore} / 100</span>
-                          </div>
-                          <ProgressBar value={contract.behavioralData.riskScore} color={contract.behavioralData.riskScore > 70 ? 'bg-orange-500' : 'bg-green-500'} />
-                        </div>
-
-                        {/* Trade Shape Match */}
-                        {contract.behavioralData.matchedDecisions && contract.behavioralData.matchedDecisions.length > 0 ? (
-                          <div className="mb-4">
-                            <div className="text-xs uppercase tracking-widest text-[var(--text-muted)] font-semibold mb-2">Trade Shape Match</div>
-                            <div className="space-y-2">
-                              {contract.behavioralData?.matchedDecisions?.map((decision: any, idx: number) => (
-                                <div key={idx} className="bg-[var(--bg-surface-elevated)] p-3 rounded border border-[var(--border-subtle)]">
-                                  <div className="flex justify-between items-center mb-1">
-                                    <span className="text-xs font-bold text-white">{decision.id} &rarr; {decision.asset}</span>
-                                    <span className={`text-xs font-mono font-bold ${decision.outcome.includes('-') ? 'text-red-400' : 'text-green-400'}`}>{decision.outcome}</span>
-                                  </div>
-                                  <div className="text-[10px] text-[var(--text-secondary)]">{decision.entryReason}</div>
-                                  <div className="mt-1 text-[9px] uppercase tracking-widest text-orange-400 font-semibold border-t border-[var(--border-subtle)] pt-1">Pattern: {decision.pattern}</div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-xs text-[var(--text-muted)] mb-4">No significant negative historical trade matches.</div>
-                        )}
-
-                        {/* Personal Adversary Alert */}
-                        {contract.behavioralData.riskScore > 50 && (
-                          <div className="p-3 bg-orange-950/20 border border-orange-900/50 rounded-lg">
-                            <h5 className="text-[10px] uppercase tracking-widest font-bold text-orange-500 mb-1 flex items-center gap-1">
-                              <AlertTriangle className="w-3 h-3" /> Personal Adversary Alert
-                            </h5>
-                            <p className="text-xs text-orange-400/80 leading-relaxed">
-                              {contract.behavioralData.intervention}
-                            </p>
-                          </div>
-                        )}
-                      </section>
-                    )}
-                  </div>
-
-                </motion.div>
-              )}
-            </AnimatePresence>
+          </form>
           </div>
         );
     }
@@ -1331,7 +455,12 @@ export default function Dashboard() {
               {Object.entries(USERS).map(([id, p]) => (
                 <button
                   key={id}
-                  onClick={() => { setActiveUser(id as any); setIsAuthenticated(true); }}
+                  onClick={() => { 
+                    setActiveUser(id as any); 
+                    setIsAuthenticated(true);
+                    sessionStorage.setItem("isAuthenticated", "true");
+                    sessionStorage.setItem("activeUser", id);
+                  }}
                   className="group relative text-left p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-base)] hover:border-indigo-500/50 hover:bg-indigo-950/10 transition-all duration-300"
                 >
                   {/* Tooltip trigger (the 'i' icon) */}
@@ -1399,7 +528,6 @@ export default function Dashboard() {
           <NavItem icon={<Database />} label="Evidence Ledger" active={currentView === "ledger"} onClick={() => setCurrentView("ledger")} />
           <NavItem icon={<UserIcon />} label="Behavioral Mirror" active={currentView === "mirror"} onClick={() => setCurrentView("mirror")} />
           <NavItem icon={<History />} label="Regret Ledger" active={currentView === "regret"} onClick={() => setCurrentView("regret")} />
-          <NavItem icon={<GitCommit />} label="Decision Replay" active={currentView === "replay"} onClick={() => setCurrentView("replay")} />
         </nav>
 
         {/* User Profile Switcher */}
@@ -1459,7 +587,13 @@ export default function Dashboard() {
               <MetricCard title="Portfolio Value" value={user.portfolio.total} subtext="Real-time valuation" trend="+2.84%" positive={true} />
               <MetricCard title="Decision Confidence" value={contract ? `${contract.confidence}%` : "--"} subtext="System calibration" trend="Active" />
               <MetricCard title="Thesis Integrity" value={contract && contract.status !== 'VOID' && contract.status !== 'INVALIDATED' ? "84/100" : "--"} subtext="Aggregated score" trend="" />
-              <MetricCard title="Data Integrity" value="98.4%" subtext="Source verification" trend="Optimal" positive={true} />
+              <MetricCard 
+                title="Live Asset Price (TSLA)" 
+                value={finnhubQuote ? `$${finnhubQuote.price.toFixed(2)}` : "--"} 
+                subtext={finnhubQuote ? `${finnhubQuote.change > 0 ? '+' : ''}${finnhubQuote.change.toFixed(2)} (${finnhubQuote.percentChange.toFixed(2)}%)` : "Finnhub Live Data"} 
+                trend={finnhubQuote ? "Live" : ""} 
+                positive={finnhubQuote ? finnhubQuote.change >= 0 : true} 
+              />
             </section>
 
             {/* Dynamic View Rendering */}
@@ -1717,6 +851,22 @@ function DashboardView({
 }: { 
   user: any, dashboardData: any, contract: any, isReplaying: boolean, replayStage: number, handleStartReplay: () => void 
 }) {
+  const [marketData, setMarketData] = useState<any[] | null>(null);
+  const [marketError, setMarketError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('http://localhost:3001/api/market-data?symbol=TSLA')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.chartData) {
+          setMarketData(data.chartData);
+        } else {
+          setMarketError(data.error || 'Failed to load market data');
+        }
+      })
+      .catch(err => setMarketError(err.message));
+  }, []);
+
   if (!dashboardData) return <div className="text-white p-8 animate-pulse">Loading Financial Intelligence...</div>;
 
   const { portfolioTrend, riskExposure } = dashboardData;
@@ -1832,6 +982,45 @@ function DashboardView({
               </LineChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      </div>
+
+      <h3 className="text-xs font-bold text-[var(--text-muted)] tracking-[0.2em] uppercase border-b border-[var(--border-strong)] pb-2 pt-4">Market Data (Real-Time)</h3>
+      <div className="premium-panel p-6 rounded-xl border border-[var(--border-strong)]">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2">
+            <h4 className="text-sm font-semibold text-white">TSLA Stock Price Trend</h4>
+            {marketError && <span className="text-[10px] text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Rate Limit Exceeded - Showing Mock</span>}
+          </div>
+          <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20 font-bold uppercase tracking-widest">{marketError ? 'Mock Data Fallback' : 'Alpha Vantage'}</span>
+        </div>
+        <div className="h-64">
+          {!marketData && !marketError ? (
+            <div className="h-full flex items-center justify-center text-[var(--text-muted)] text-sm animate-pulse">Fetching live data...</div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={marketData || [
+                { date: "Day 1", price: 180 }, { date: "Day 2", price: 185 },
+                { date: "Day 3", price: 195 }, { date: "Day 4", price: 190 },
+                { date: "Day 5", price: 210 }, { date: "Day 6", price: 215 },
+                { date: "Day 7", price: 205 }, { date: "Day 8", price: 220 },
+                { date: "Day 9", price: 240 }, { date: "Day 10", price: 235 },
+                { date: "Day 11", price: 250 }, { date: "Day 12", price: 265 }
+              ]}>
+                <defs>
+                  <linearGradient id="stockColor" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={marketError ? "#f59e0b" : "#10b981"} stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor={marketError ? "#f59e0b" : "#10b981"} stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                <XAxis dataKey="date" stroke="#ffffff50" fontSize={10} tickMargin={10} />
+                <YAxis domain={['auto', 'auto']} stroke="#ffffff50" fontSize={10} width={40} tickFormatter={(val) => `$${val.toFixed(0)}`} />
+                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
+                <Area type="monotone" dataKey="price" stroke={marketError ? "#f59e0b" : "#10b981"} fillOpacity={1} fill="url(#stockColor)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
