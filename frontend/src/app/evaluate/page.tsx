@@ -144,6 +144,19 @@ function EvaluateContent() {
                   <span className="font-bold text-[10px] uppercase tracking-widest text-[var(--text-muted)] block mb-1">EVALUATED THESIS</span> 
                   <span className="text-white">"{contract.question || contract.thesis}"</span>
                 </div>
+                
+                {contract.aiSummary && (
+                  <div className="mt-4 p-5 rounded-lg bg-indigo-950/20 border border-indigo-500/30 relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="w-4 h-4 text-indigo-400" />
+                      <span className="font-bold text-xs uppercase tracking-widest text-indigo-300">Multi-Agent AI Summary</span>
+                    </div>
+                    <p className="text-sm text-indigo-100/90 leading-relaxed font-medium">
+                      {contract.aiSummary}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

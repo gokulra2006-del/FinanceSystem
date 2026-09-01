@@ -8,6 +8,37 @@ const { compareAndRecordThesis } = require('./tracker');
 const { runDecisionStressTest } = require('./stressTest');
 const { runDevilsAdvocate } = require('./devilsAdvocate');
 
+function generateAISummary(agents) {
+    if (!agents || agents.length === 0) return "No agent analysis available.";
+    
+    const bullishAgents = agents.filter(a => a.status === 'bullish').map(a => a.name);
+    const bearishAgents = agents.filter(a => a.status === 'bearish').map(a => a.name);
+    
+    let summary = `The intelligence network has completed its multi-agent evaluation. `;
+    
+    if (bullishAgents.length > bearishAgents.length) {
+        summary += `Overall sentiment is bullish, driven by strong signals from ${bullishAgents.slice(0, 2).join(" and ")}. `;
+        if (bearishAgents.length > 0) {
+            summary += `However, ${bearishAgents[0]} raised concerns which were ultimately outweighed by positive factors. `;
+        }
+    } else if (bearishAgents.length > bullishAgents.length) {
+        summary += `The consensus leans bearish due to critical flags raised by ${bearishAgents.slice(0, 2).join(" and ")}. `;
+        if (bullishAgents.length > 0) {
+            summary += `While ${bullishAgents[0]} detected some positive momentum, the structural risks remain too high. `;
+        }
+    } else {
+        summary += `The network is deeply divided. Strong conflicting signals between ${bullishAgents[0] || 'bullish models'} and ${bearishAgents[0] || 'bearish models'} require caution. `;
+    }
+    
+    // Add a specific highlight from one of the agents
+    const criticalAgent = agents.find(a => a.name === 'Portfolio Risk' || a.name === 'Behavioral Mirror') || agents[0];
+    if (criticalAgent) {
+        summary += `Notably, ${criticalAgent.name} concluded: "${criticalAgent.message}"`;
+    }
+    
+    return summary;
+}
+
 /**
  * The core Dynamic Orchestrator. 
  * Replaces the hardcoded SentinelIQ response with dynamic analysis.
@@ -322,6 +353,7 @@ function processQuestion(question, userId) {
         thesis: thesis,
         confidence: finalConfidence,
         confidenceBreakdown: evidenceData,
+        aiSummary: generateAISummary(agents),
         provenanceGraph: JSON.parse(JSON.stringify(GLOBAL_EVIDENCE_GRAPH)),
         investorFit: Math.max(0, 100 - (confidencePenalty * 1.5)),
         positionSuggestion: intentData.requiresContract ? (finalConfidence > 80 ? "Full Allocation" : "Quarter Position") : "N/A",
