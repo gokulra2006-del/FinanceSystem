@@ -775,8 +775,8 @@ export default function Dashboard() {
               <MetricCard title="Thesis Integrity" value={contract && contract.status !== 'VOID' && contract.status !== 'INVALIDATED' ? "84/100" : "--"} subtext="Aggregated score" trend="" />
               <MetricCard 
                 title="Live Asset Price (TSLA)" 
-                value={finnhubQuote ? `$${finnhubQuote.price.toFixed(2)}` : "--"} 
-                subtext={finnhubQuote ? `${finnhubQuote.change > 0 ? '+' : ''}${finnhubQuote.change.toFixed(2)} (${finnhubQuote.percentChange.toFixed(2)}%)` : "Finnhub Live Data"} 
+                value={finnhubQuote ? `₹${(finnhubQuote.price * 83.5).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : "--"} 
+                subtext={finnhubQuote ? `${finnhubQuote.change > 0 ? '+' : ''}${(finnhubQuote.change * 83.5).toLocaleString('en-IN', { maximumFractionDigits: 2 })} (${finnhubQuote.percentChange.toFixed(2)}%)` : "Finnhub Live Data"} 
                 trend={finnhubQuote ? "Live" : ""} 
                 positive={finnhubQuote ? finnhubQuote.change >= 0 : true} 
               />
@@ -1201,7 +1201,7 @@ function DashboardView({
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                 <XAxis dataKey="date" stroke="#ffffff50" fontSize={10} tickMargin={10} />
-                <YAxis domain={['auto', 'auto']} stroke="#ffffff50" fontSize={10} width={40} tickFormatter={(val) => `$${val.toFixed(0)}`} />
+                <YAxis domain={['auto', 'auto']} stroke="#ffffff50" fontSize={10} width={60} tickFormatter={(val) => `₹${(val * 83.5).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} />
                 <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
                 <Area type="monotone" dataKey="price" stroke={marketError ? "#f59e0b" : "#10b981"} fillOpacity={1} fill="url(#stockColor)" />
               </AreaChart>
