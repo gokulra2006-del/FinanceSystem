@@ -19,6 +19,7 @@ function EvaluateContent() {
   const [contract, setContract] = useState<any>(null);
   const [errorState, setErrorState] = useState<any>(null);
   const [processingStage, setProcessingStage] = useState(0);
+  const [showSummary, setShowSummary] = useState(false);
 
   useEffect(() => {
     if (!thesis) {
@@ -145,8 +146,22 @@ function EvaluateContent() {
                   <span className="text-white">"{contract.question || contract.thesis}"</span>
                 </div>
                 
-                {contract.aiSummary && (
-                  <div className="mt-4 p-5 rounded-lg bg-indigo-950/20 border border-indigo-500/30 relative overflow-hidden group">
+                {contract.aiSummary && !showSummary && (
+                  <button 
+                    onClick={() => setShowSummary(true)}
+                    className="mt-4 w-full p-4 rounded-lg bg-indigo-950/20 border border-indigo-500/30 hover:bg-indigo-900/30 hover:border-indigo-400/50 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4 text-indigo-400 group-hover:animate-pulse" />
+                    <span className="font-bold text-xs uppercase tracking-widest text-indigo-300">Generate Multi-Agent AI Summary</span>
+                  </button>
+                )}
+
+                {contract.aiSummary && showSummary && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }} 
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mt-4 p-5 rounded-lg bg-indigo-950/20 border border-indigo-500/30 relative overflow-hidden group"
+                  >
                     <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
                     <div className="flex items-center gap-2 mb-2">
                       <Sparkles className="w-4 h-4 text-indigo-400" />
@@ -155,7 +170,7 @@ function EvaluateContent() {
                     <p className="text-sm text-indigo-100/90 leading-relaxed font-medium">
                       {contract.aiSummary}
                     </p>
-                  </div>
+                  </motion.div>
                 )}
               </div>
             </div>
