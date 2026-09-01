@@ -1,77 +1,78 @@
+```markdown
 <div align="center">
-  <img src="frontend/public/logo.png" alt="SentinelIQ Logo" width="120" />
-  <h1>SentinelIQ 🧠📈</h1>
-  <p><strong>Multi-Agent Autonomous Financial Intelligence</strong></p>
-  <p>
-    SentinelIQ is a powerful, autonomous AI-driven financial intelligence dashboard. It simulates a war room of expert financial agents analyzing portfolios, executing stress tests, mitigating cognitive biases, and intercepting risky trades in real-time.
-  </p>
+  <img src="frontend/public/logo.png" alt="SentinelIQ" width="120" />
+  <h1>SentinelIQ</h1>
+  <p><strong>Multi-agent financial intelligence dashboard</strong></p>
 </div>
 
----
+SentinelIQ runs a panel of specialized LLM agents over a portfolio. They argue,
+stress-test positions, flag cognitive biases in the user's own trading history,
+and hold risky trades for review before they go through.
 
-## 🌟 Key Features
+## Features
 
-* **🤖 Autonomous Agent War Room:** Multiple specialized AI agents (e.g., Risk Analyst, Momentum Trader, Value Investor) independently evaluate financial theses and reach consensus.
-* **🛡️ Decision Firewall:** Real-time interception of risky trades with automated stress testing and cognitive bias detection.
-* **📊 Live Telemetry:** Integrates real-time financial market data seamlessly into a beautiful, dynamic dashboard.
-* **🪞 Behavioral Mirror:** Analyzes user trading behavior to highlight biases like "Loss Aversion" or "Momentum Chasing".
-* **⏪ Regret Ledger:** Point-in-time replay state allows you to re-run historical decisions and analyze "what-if" scenarios.
+**Agent war room** — Risk Analyst, Momentum Trader, and Value Investor agents
+evaluate a thesis independently, then reconcile into a consensus call with the
+dissents preserved.
 
-## 🚀 Tech Stack
+**Decision firewall** — Intercepts a trade before execution, runs it through
+stress scenarios, and surfaces the bias patterns behind it.
 
-* **Frontend:** Next.js, React, TailwindCSS, Recharts, Framer Motion
-* **Backend:** Node.js, Express.js
-* **AI Engine:** Groq API (Llama 3.3 70B & Llama 3.1 8B)
-* **Market Data:** Finnhub (Live Quotes) & Alpha Vantage (Historical Time Series)
+**Live telemetry** — Real-time quotes and historical series feeding the dashboard.
 
-## 🛠️ Quick Start
+**Behavioral mirror** — Profiles trading history for recurring biases such as
+loss aversion and momentum chasing.
 
-### 1. Clone the repository
+**Regret ledger** — Point-in-time state replay, so past decisions can be re-run
+against what was actually knowable then.
+
+## Stack
+
+| Layer | Tools |
+|---|---|
+| Frontend | Next.js, React, TailwindCSS, Recharts, Framer Motion |
+| Backend | Node.js, Express |
+| Inference | Groq (Llama 3.3 70B, Llama 3.1 8B) |
+| Market data | Finnhub (quotes), Alpha Vantage (time series) |
+
+## Setup
+
 ```bash
 git clone https://github.com/your-username/FinanceIntelligenceSystem.git
 cd FinanceIntelligenceSystem
 ```
 
-### 2. Configure Environment Variables
-Create a `.env` file in the `backend/` directory:
+Create `backend/.env`:
+
 ```env
-GROQ_API_KEY=your_groq_api_key
-ALPHAVANTAGE_API_KEY=your_alphavantage_key
-FINNHUB_API_KEY=your_finnhub_key
+GROQ_API_KEY=
+ALPHAVANTAGE_API_KEY=
+FINNHUB_API_KEY=
 ```
 
-### 3. Install Dependencies
+Install:
+
 ```bash
-# Install backend dependencies
-cd backend
-npm install
-
-# Install frontend dependencies
-cd ../frontend
-npm install
+cd backend && npm install
+cd ../frontend && npm install
 ```
 
-### 4. Run the Application
-Open two terminal windows:
+Run in two terminals:
 
-**Terminal 1 (Backend):**
 ```bash
-cd backend
-node index.js
+cd backend && node index.js     # http://localhost:3001
+cd frontend && npm run dev      # http://localhost:3000
 ```
-*Backend runs on http://localhost:3001*
 
-**Terminal 2 (Frontend):**
-```bash
-cd frontend
-npm run dev
+## Notes
+
+Alpha Vantage's free tier caps at 25 requests/day, so historical series are
+cached after first fetch. Agent calls are fanned out in parallel; a full war-room
+round takes roughly a few seconds on the 8B model and longer on 70B.
+
+## License
+
+MIT
 ```
-*Frontend runs on http://localhost:3000*
 
-## 🎨 UI/UX Philosophy
-SentinelIQ is designed with a premium, terminal-inspired dark mode aesthetic. Utilizing vibrant accents, glassmorphism, and micro-animations, the interface provides a deeply engaging and data-rich user experience that visualizes complex AI operations elegantly.
-
----
-<div align="center">
-  <i>Built for the future of decentralized financial intelligence.</i>
-</div>
+Two things worth adding when you have them: a screenshot or GIF of the war room under the title (it's the single highest-value thing in a hackathon README), and real numbers in the Notes section instead of my placeholders. Also drop the "built for the future of decentralized financial intelligence" line — it promises something the project doesn't do.
